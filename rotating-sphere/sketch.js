@@ -9,6 +9,8 @@ let sphereR;             // pixel radius used in 3D mode
 let axisTheta = Math.acos(Math.sqrt(3) / 3); // polar angle from +Z  (~54.7°)
 let axisPhi   = Math.PI / 4;                  // azimuthal angle in XY (45°)
 let rotSpeed  = 0.01;                          // rad / frame
+let coordExp      = 1.0; // real part   a: sign(v)·|v|^a·cos(b·ln|v|) applied to normals
+let coordExpImag  = 0.0; // imaginary part b: 0 = no effect, ±n = oscillating colour bands
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -79,6 +81,23 @@ function setRotSpeed(val) {
   rotSpeed = parseFloat(val);
 }
 
+function setCoordExp(val) {
+  coordExp = parseFloat(val);
+}
+
+function setCoordExpImag(val) {
+  coordExpImag = parseFloat(val);
+}
+
+// Complex-power warp on a single coordinate component.
+// Real part of sign(v)·|v|^(a+ib) = sign(v)·|v|^a·cos(b·ln|v|).
+// At b=0 this is sign(v)·|v|^a; at a=1,b=0 it is the identity.
+function warpCoord(v, a, b) {
+  if (v === 0) return 0;
+  const absv = Math.abs(v);
+  return Math.sign(v) * Math.pow(absv, a) * (b === 0 ? 1 : Math.cos(b * Math.log(absv)));
+}
+
 // Rodrigues rotation. Pre-scaled by 127.5 so the inner loop can write
 // straight to pixels with no shift/scale/floor/constrain.
 function buildRotationMatrix(RM, RV, theta) {
@@ -124,10 +143,14 @@ function renderSphere(img, RM, cx, cy, cz) {
   const m20 = RM[6], m21 = RM[7], m22 = RM[8];
   const k = 127.5;
   const N = cx.length;
+  const a = coordExp, b = coordExpImag;
+  const identity = (a === 1 && b === 0);
 
   for (let i = 0; i < N; i++) {
-    const x = cx[i], y = cy[i], z = cz[i];
     const p = i << 2;
+    const x = identity ? cx[i] : warpCoord(cx[i], a, b);
+    const y = identity ? cy[i] : warpCoord(cy[i], a, b);
+    const z = identity ? cz[i] : warpCoord(cz[i], a, b);
     pixels[p]     = m00 * x + m01 * y + m02 * z + k;
     pixels[p + 1] = m10 * x + m11 * y + m12 * z + k;
     pixels[p + 2] = m20 * x + m21 * y + m22 * z + k;
@@ -147,20 +170,25 @@ function renderSphere3D(img, RM, R, ox, oy) {
   const m20 = RM[6], m21 = RM[7], m22 = RM[8];
   const k = 127.5;
   const invR = 1 / R;
+  const a = coordExp, b = coordExpImag;
+  const identity = (a === 1 && b === 0);
 
   for (let j = 0; j < H; j++) {
-    const ny = (j - oy) * invR;
-    const ny2 = ny * ny;
+    const rawNy = (j - oy) * invR;
+    const rawNy2 = rawNy * rawNy;
     const rowBase = j * W;
     for (let i = 0; i < W; i++) {
       const p = (rowBase + i) << 2;
-      const nx = (i - ox) * invR;
-      const d2 = nx * nx + ny2;
+      const rawNx = (i - ox) * invR;
+      const d2 = rawNx * rawNx + rawNy2;
       if (d2 > 1) {
         pixels[p] = pixels[p + 1] = pixels[p + 2] = 0;
         pixels[p + 3] = 255;
       } else {
-        const nz = Math.sqrt(1 - d2);
+        const rawNz = Math.sqrt(1 - d2);
+        const nx = identity ? rawNx : warpCoord(rawNx, a, b);
+        const ny = identity ? rawNy : warpCoord(rawNy, a, b);
+        const nz = identity ? rawNz : warpCoord(rawNz, a, b);
         pixels[p]     = m00 * nx + m01 * ny + m02 * nz + k;
         pixels[p + 1] = m10 * nx + m11 * ny + m12 * nz + k;
         pixels[p + 2] = m20 * nx + m21 * ny + m22 * nz + k;
