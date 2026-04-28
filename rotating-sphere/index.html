@@ -35,6 +35,18 @@
         flex-shrink: 0;
       }
       #hud a.back:hover { background: rgba(255, 255, 255, 0.2); }
+      #hud button {
+        padding: 0.3rem 0.75rem;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 5px;
+        color: #eee;
+        font-size: 0.85rem;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      #hud button:hover { background: rgba(255, 255, 255, 0.2); }
       .info-name { font-weight: 600; }
       .info-desc { color: #aaa; font-size: 0.8rem; margin-top: 0.1rem; }
     </style>
@@ -44,6 +56,7 @@
     <script src="sketch.js"></script>
     <div id="hud">
       <a class="back" href="../">&#8592; Index</a>
+      <button id="mode-btn" onclick="toggle3D()">3D sphere</button>
       <div>
         <div class="info-name">Rotating sphere</div>
         <div class="info-desc">UV-mapped unit sphere rotated by a Rodrigues matrix; move the cursor to spin faster.</div>

@@ -1,7 +1,9 @@
 let rotationVector;
-let cx, cy, cz;          // Float32Array of unit-sphere coords
+let cx, cy, cz;          // Float32Array of unit-sphere coords (flat equirectangular mode)
 let UVmap;
 let RM;                  // flat 9-entry rotation matrix (scaled by 127.5)
+let mode3D = false;
+let sphereR;             // pixel radius used in 3D mode
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -20,6 +22,7 @@ function initBuffers() {
   cz = new Float32Array(N);
   UVmap = createImage(width, height);
   buildCoordsVector(cx, cy, cz, height, width);
+  sphereR = Math.min(width, height) * 0.45;
 }
 
 function windowResized() {
@@ -30,8 +33,18 @@ function windowResized() {
 function draw() {
   const theta = frameCount * 0.01 + (8 * Math.PI * mouseX / width);
   buildRotationMatrix(RM, rotationVector, theta);
-  renderSphere(UVmap, RM, cx, cy, cz);
+  if (mode3D) {
+    renderSphere3D(UVmap, RM, sphereR, width / 2, height / 2);
+  } else {
+    renderSphere(UVmap, RM, cx, cy, cz);
+  }
   image(UVmap, 0, 0);
+}
+
+function toggle3D() {
+  mode3D = !mode3D;
+  const btn = document.getElementById('mode-btn');
+  btn.textContent = mode3D ? 'Flat map' : '3D sphere';
 }
 
 // Rodrigues rotation. Pre-scaled by 127.5 so the inner loop can write
@@ -87,6 +100,41 @@ function renderSphere(img, RM, cx, cy, cz) {
     pixels[p + 1] = m10 * x + m11 * y + m12 * z + k;
     pixels[p + 2] = m20 * x + m21 * y + m22 * z + k;
     pixels[p + 3] = 255;
+  }
+  img.updatePixels();
+}
+
+// Ray-sphere intersection: for each pixel shoot an orthographic ray, compute
+// the surface normal at the front hit point, then colour it the same way.
+function renderSphere3D(img, RM, R, ox, oy) {
+  img.loadPixels();
+  const pixels = img.pixels;
+  const W = img.width, H = img.height;
+  const m00 = RM[0], m01 = RM[1], m02 = RM[2];
+  const m10 = RM[3], m11 = RM[4], m12 = RM[5];
+  const m20 = RM[6], m21 = RM[7], m22 = RM[8];
+  const k = 127.5;
+  const invR = 1 / R;
+
+  for (let j = 0; j < H; j++) {
+    const ny = (j - oy) * invR;
+    const ny2 = ny * ny;
+    const rowBase = j * W;
+    for (let i = 0; i < W; i++) {
+      const p = (rowBase + i) << 2;
+      const nx = (i - ox) * invR;
+      const d2 = nx * nx + ny2;
+      if (d2 > 1) {
+        pixels[p] = pixels[p + 1] = pixels[p + 2] = 0;
+        pixels[p + 3] = 255;
+      } else {
+        const nz = Math.sqrt(1 - d2);
+        pixels[p]     = m00 * nx + m01 * ny + m02 * nz + k;
+        pixels[p + 1] = m10 * nx + m11 * ny + m12 * nz + k;
+        pixels[p + 2] = m20 * nx + m21 * ny + m22 * nz + k;
+        pixels[p + 3] = 255;
+      }
+    }
   }
   img.updatePixels();
 }
