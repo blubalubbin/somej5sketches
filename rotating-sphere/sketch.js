@@ -4,19 +4,27 @@ let UVmap;
 let RM;                  // flat 9-entry rotation matrix (scaled by 127.5)
 
 function setup() {
-  createCanvas(floor(displayWidth/4*3), floor(displayHeight/5*3));
+  createCanvas(windowWidth, windowHeight);
   pixelDensity(1);
 
   rotationVector = createVector(Math.sqrt(3) / 3, Math.sqrt(3) / 3, Math.sqrt(3) / 3);
+  RM = new Float64Array(9);
 
+  initBuffers();
+}
+
+function initBuffers() {
   const N = width * height;
   cx = new Float32Array(N);
   cy = new Float32Array(N);
   cz = new Float32Array(N);
-  RM = new Float64Array(9);
-
   UVmap = createImage(width, height);
   buildCoordsVector(cx, cy, cz, height, width);
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initBuffers();
 }
 
 function draw() {
