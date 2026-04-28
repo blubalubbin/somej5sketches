@@ -113,7 +113,9 @@
   <body>
     <script src="sketch.js"></script>
 
-    <div id="overlay">
+    <div id="overlay"
+         onmouseenter="hudFocused=true"  onmouseleave="hudFocused=false"
+         ontouchstart="hudFocused=true"  ontouchend="hudFocused=false">
       <div id="controls-panel">
         <div class="ctrl-heading">Rotation axis</div>
 

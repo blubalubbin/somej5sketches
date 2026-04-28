@@ -12,6 +12,9 @@ let rotSpeed  = 0.01;                          // rad / frame
 let coordExp      = 1.0; // real part   a: sign(v)·|v|^a·cos(b·ln|v|) applied to normals
 let coordExpImag  = 0.0; // imaginary part b: 0 = no effect, ±n = oscillating colour bands
 
+let hudFocused  = false; // true while cursor is over the HUD overlay
+let lastMouseX  = 0;     // frozen when hudFocused so the canvas ignores HUD hover
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   pixelDensity(1);
@@ -37,7 +40,8 @@ function windowResized() {
 }
 
 function draw() {
-  const theta = frameCount * rotSpeed + (8 * Math.PI * mouseX / width);
+  if (!hudFocused) lastMouseX = mouseX;
+  const theta = frameCount * rotSpeed + (8 * Math.PI * lastMouseX / width);
   buildRotationMatrix(RM, rotationVector, theta);
   if (mode3D) {
     renderSphere3D(UVmap, RM, sphereR, width / 2, height / 2);
