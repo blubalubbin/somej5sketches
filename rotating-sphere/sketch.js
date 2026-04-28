@@ -5,13 +5,17 @@ let RM;                  // flat 9-entry rotation matrix (scaled by 127.5)
 let mode3D = false;
 let sphereR;             // pixel radius used in 3D mode
 
+// Spherical-coordinate params for the rotation axis
+let axisTheta = Math.acos(Math.sqrt(3) / 3); // polar angle from +Z  (~54.7°)
+let axisPhi   = Math.PI / 4;                  // azimuthal angle in XY (45°)
+let rotSpeed  = 0.01;                          // rad / frame
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   pixelDensity(1);
 
-  rotationVector = createVector(Math.sqrt(3) / 3, Math.sqrt(3) / 3, Math.sqrt(3) / 3);
   RM = new Float64Array(9);
-
+  updateRotationVector();
   initBuffers();
 }
 
@@ -31,7 +35,7 @@ function windowResized() {
 }
 
 function draw() {
-  const theta = frameCount * 0.01 + (8 * Math.PI * mouseX / width);
+  const theta = frameCount * rotSpeed + (8 * Math.PI * mouseX / width);
   buildRotationMatrix(RM, rotationVector, theta);
   if (mode3D) {
     renderSphere3D(UVmap, RM, sphereR, width / 2, height / 2);
@@ -43,8 +47,36 @@ function draw() {
 
 function toggle3D() {
   mode3D = !mode3D;
-  const btn = document.getElementById('mode-btn');
-  btn.textContent = mode3D ? 'Flat map' : '3D sphere';
+  document.getElementById('mode-btn').textContent = mode3D ? 'Flat map' : '3D sphere';
+}
+
+// Recompute rotationVector from spherical coords and refresh the readout.
+function updateRotationVector() {
+  const sinT = Math.sin(axisTheta);
+  rotationVector = createVector(
+    sinT * Math.cos(axisPhi),
+    sinT * Math.sin(axisPhi),
+    Math.cos(axisTheta)
+  );
+  const el = document.getElementById('axis-display');
+  if (el) {
+    const v = rotationVector;
+    el.textContent = `${v.x.toFixed(3)}, ${v.y.toFixed(3)}, ${v.z.toFixed(3)}`;
+  }
+}
+
+function setAxisTheta(deg) {
+  axisTheta = deg * Math.PI / 180;
+  updateRotationVector();
+}
+
+function setAxisPhi(deg) {
+  axisPhi = deg * Math.PI / 180;
+  updateRotationVector();
+}
+
+function setRotSpeed(val) {
+  rotSpeed = parseFloat(val);
 }
 
 // Rodrigues rotation. Pre-scaled by 127.5 so the inner loop can write
