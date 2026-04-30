@@ -2,9 +2,6 @@ let rotationVector;
 let sphX, sphY, sphZ;   // pre-computed unit-sphere coords (equirectangular mode)
 let UVmap;
 let RM;                  // rotation matrix (pre-scaled by 127.5)
-let mode3D  = false;
-let sphereR;
-
 // Rotation-axis spherical coordinates
 let axisTheta    = Math.acos(Math.sqrt(3) / 3); // polar  (~54.7°)
 let axisPhi      = Math.PI / 4;                  // azimuthal (45°)
@@ -38,7 +35,6 @@ function initBuffers() {
   sphZ = new Float32Array(N);
   UVmap = createImage(width, height);
   buildCoordsVector(sphX, sphY, sphZ, height, width);
-  sphereR = Math.min(width, height) * 0.45;
 }
 
 function windowResized() {
@@ -49,17 +45,8 @@ function windowResized() {
 function draw() {
   const theta = rotOffset;
   buildRotationMatrix(RM, rotationVector, theta);
-  if (mode3D) {
-    renderSphere3D(UVmap, RM, sphereR, width / 2, height / 2);
-  } else {
-    renderSphere(UVmap, RM, sphX, sphY, sphZ);
-  }
+  renderSphere(UVmap, RM, sphX, sphY, sphZ);
   image(UVmap, 0, 0);
-}
-
-function toggle3D() {
-  mode3D = !mode3D;
-  document.getElementById('mode-btn').textContent = mode3D ? 'Flat map' : '3D sphere';
 }
 
 function updateRotationVector() {
@@ -96,7 +83,6 @@ function getSettings() {
     cy: +coordCenterY.toFixed(3),
     cz: +coordCenterZ.toFixed(3),
     ro: +rotOffset.toFixed(3),
-    m:  mode3D ? 1 : 0,
   };
 }
 
@@ -132,7 +118,6 @@ function applySettingsFromHash() {
   if ('cy' in s) coordCenterY = num(s.cy, coordCenterY);
   if ('cz' in s) coordCenterZ = num(s.cz, coordCenterZ);
   if ('ro' in s) rotOffset    = num(s.ro, rotOffset);
-  if ('m'  in s) mode3D       = s.m === '1' || s.m === 'true';
 }
 
 // Real part of sign(v)·|v|^(a+ib).  At a=1, b=0 this is the identity.
@@ -199,45 +184,3 @@ function renderSphere(img, RM, xs, ys, zs) {
   img.updatePixels();
 }
 
-function renderSphere3D(img, RM, R, ox, oy) {
-  img.loadPixels();
-  const pixels = img.pixels;
-  const W = img.width, H = img.height;
-  const m00=RM[0],m01=RM[1],m02=RM[2],m10=RM[3],m11=RM[4],m12=RM[5],m20=RM[6],m21=RM[7],m22=RM[8];
-  const k    = 127.5;
-  const invR = 1 / R;
-  const a    = coordExp, b = coordExpImag;
-  const cx   = coordCenterX, cy = coordCenterY, cz = coordCenterZ;
-  const pure = (a===1 && b===0 && cx===0 && cy===0 && cz===0);
-
-  for (let j = 0; j < H; j++) {
-    const rny  = (j-oy) * invR;
-    const rny2 = rny * rny;
-    const rowBase = j * W;
-    for (let i = 0; i < W; i++) {
-      const p   = (rowBase+i) << 2;
-      const rnx = (i-ox) * invR;
-      const d2  = rnx*rnx + rny2;
-      if (d2 > 1) {
-        pixels[p]=pixels[p+1]=pixels[p+2]=0; pixels[p+3]=255; continue;
-      }
-      const rnz = Math.sqrt(1-d2);
-      let nx, ny, nz;
-      if (pure) {
-        nx = rnx; ny = rny; nz = rnz;
-      } else {
-        const wx = warpCoord(rnx-cx, a, b);
-        const wy = warpCoord(rny-cy, a, b);
-        const wz = warpCoord(rnz-cz, a, b);
-        const len = Math.sqrt(wx*wx + wy*wy + wz*wz);
-        if (len < 1e-6) { pixels[p]=pixels[p+1]=pixels[p+2]=0; pixels[p+3]=255; continue; }
-        nx = wx/len; ny = wy/len; nz = wz/len;
-      }
-      pixels[p]   = m00*nx + m01*ny + m02*nz + k;
-      pixels[p+1] = m10*nx + m11*ny + m12*nz + k;
-      pixels[p+2] = m20*nx + m21*ny + m22*nz + k;
-      pixels[p+3] = 255;
-    }
-  }
-  img.updatePixels();
-}
