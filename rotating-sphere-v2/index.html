@@ -161,10 +161,10 @@
               oninput="setAxisTheta(this.value);
                        document.getElementById('theta-val').textContent=(+this.value).toFixed(1)+'°'">
             <span class="ctrl-value" id="theta-val">54.7°</span>
+            <button class="speed-play-btn" id="theta-slider-play-btn" onclick="toggleSliderSpeed('theta-slider')">▶</button>
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <button class="speed-play-btn" id="theta-slider-play-btn" onclick="toggleSliderSpeed('theta-slider')">▶</button>
             <input id="theta-slider-speed" type="range" min="-2" max="2" step="0.05" value="0"
               oninput="setSliderSpeed('theta-slider', this.value)">
             <span class="speed-value" id="theta-slider-speed-val">0.00</span>
@@ -178,10 +178,10 @@
               oninput="setAxisPhi(this.value);
                        document.getElementById('phi-val').textContent=(+this.value).toFixed(1)+'°'">
             <span class="ctrl-value" id="phi-val">45.0°</span>
+            <button class="speed-play-btn" id="phi-slider-play-btn" onclick="toggleSliderSpeed('phi-slider')">▶</button>
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <button class="speed-play-btn" id="phi-slider-play-btn" onclick="toggleSliderSpeed('phi-slider')">▶</button>
             <input id="phi-slider-speed" type="range" min="-3" max="3" step="0.05" value="0"
               oninput="setSliderSpeed('phi-slider', this.value)">
             <span class="speed-value" id="phi-slider-speed-val">0.00</span>
@@ -195,10 +195,10 @@
               oninput="setRotOffset(this.value);
                        document.getElementById('rot-offset-val').textContent=(+this.value*180/Math.PI).toFixed(1)+'°'">
             <span class="ctrl-value" id="rot-offset-val">0.0°</span>
+            <button class="speed-play-btn" id="rot-offset-slider-play-btn" onclick="toggleSliderSpeed('rot-offset-slider')">▶</button>
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <button class="speed-play-btn" id="rot-offset-slider-play-btn" onclick="toggleSliderSpeed('rot-offset-slider')">▶</button>
             <input id="rot-offset-slider-speed" type="range" min="-0.2" max="0.2" step="0.005" value="0"
               oninput="setSliderSpeed('rot-offset-slider', this.value)">
             <span class="speed-value" id="rot-offset-slider-speed-val">0.000</span>
@@ -214,10 +214,10 @@
               oninput="setCoordExp(this.value);
                        document.getElementById('exp-val').textContent=(+this.value).toFixed(2)">
             <span class="ctrl-value" id="exp-val">1.00</span>
+            <button class="speed-play-btn" id="exp-slider-play-btn" onclick="toggleSliderSpeed('exp-slider')">▶</button>
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <button class="speed-play-btn" id="exp-slider-play-btn" onclick="toggleSliderSpeed('exp-slider')">▶</button>
             <input id="exp-slider-speed" type="range" min="-0.1" max="0.1" step="0.001" value="0"
               oninput="setSliderSpeed('exp-slider', this.value)">
             <span class="speed-value" id="exp-slider-speed-val">0.000</span>
@@ -231,10 +231,10 @@
               oninput="setCoordExpImag(this.value);
                        document.getElementById('expimag-val').textContent=(+this.value).toFixed(1)">
             <span class="ctrl-value" id="expimag-val">0.0</span>
+            <button class="speed-play-btn" id="expimag-slider-play-btn" onclick="toggleSliderSpeed('expimag-slider')">▶</button>
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <button class="speed-play-btn" id="expimag-slider-play-btn" onclick="toggleSliderSpeed('expimag-slider')">▶</button>
             <input id="expimag-slider-speed" type="range" min="-0.5" max="0.5" step="0.005" value="0"
               oninput="setSliderSpeed('expimag-slider', this.value)">
             <span class="speed-value" id="expimag-slider-speed-val">0.000</span>
@@ -250,10 +250,10 @@
               oninput="setCoordCenterX(this.value);
                        document.getElementById('cx-val').textContent=(+this.value).toFixed(2)">
             <span class="ctrl-value" id="cx-val">0.00</span>
+            <button class="speed-play-btn" id="cx-slider-play-btn" onclick="toggleSliderSpeed('cx-slider')">▶</button>
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <button class="speed-play-btn" id="cx-slider-play-btn" onclick="toggleSliderSpeed('cx-slider')">▶</button>
             <input id="cx-slider-speed" type="range" min="-0.05" max="0.05" step="0.001" value="0"
               oninput="setSliderSpeed('cx-slider', this.value)">
             <span class="speed-value" id="cx-slider-speed-val">0.000</span>
@@ -267,10 +267,10 @@
               oninput="setCoordCenterY(this.value);
                        document.getElementById('cy-val').textContent=(+this.value).toFixed(2)">
             <span class="ctrl-value" id="cy-val">0.00</span>
+            <button class="speed-play-btn" id="cy-slider-play-btn" onclick="toggleSliderSpeed('cy-slider')">▶</button>
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <button class="speed-play-btn" id="cy-slider-play-btn" onclick="toggleSliderSpeed('cy-slider')">▶</button>
             <input id="cy-slider-speed" type="range" min="-0.05" max="0.05" step="0.001" value="0"
               oninput="setSliderSpeed('cy-slider', this.value)">
             <span class="speed-value" id="cy-slider-speed-val">0.000</span>
@@ -284,10 +284,10 @@
               oninput="setCoordCenterZ(this.value);
                        document.getElementById('cz-val').textContent=(+this.value).toFixed(2)">
             <span class="ctrl-value" id="cz-val">0.00</span>
+            <button class="speed-play-btn" id="cz-slider-play-btn" onclick="toggleSliderSpeed('cz-slider')">▶</button>
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <button class="speed-play-btn" id="cz-slider-play-btn" onclick="toggleSliderSpeed('cz-slider')">▶</button>
             <input id="cz-slider-speed" type="range" min="-0.05" max="0.05" step="0.001" value="0"
               oninput="setSliderSpeed('cz-slider', this.value)">
             <span class="speed-value" id="cz-slider-speed-val">0.000</span>
@@ -385,9 +385,11 @@
           if (span <= 0) continue;
           let v = parseFloat(slider.value);
           if (_OSCILLATE_IDS.has(id)) {
-            // Oscillate: bounce direction at each boundary.
-            let dir = _sliderBounceDir[id] ?? 1;
-            v += speed * dir;
+            // Oscillate: direction tracks independently of speed sign so that
+            // negative speed values don't cause the slider to stick at the min.
+            if (_sliderBounceDir[id] === undefined) _sliderBounceDir[id] = 1;
+            let dir = _sliderBounceDir[id];
+            v += Math.abs(speed) * dir;
             if (v > max) { v = 2 * max - v; dir = -1; }
             else if (v < min) { v = 2 * min - v; dir = 1; }
             v = Math.max(min, Math.min(max, v));
