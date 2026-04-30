@@ -425,6 +425,8 @@
       const _sliderBounceDir = {};
       // Last non-zero speed per slider (for play/pause resume).
       const _sliderLastSpeeds = {};
+      // ID of the main slider currently being dragged (auto-cycle is paused for it).
+      let _draggingSliderId = null;
       // Default speeds applied on first ▶ press.
       const _sliderDefaultSpeeds = {
         'theta-slider':      0.5,
@@ -503,6 +505,7 @@
         for (const id in _sliderSpeeds) {
           const speed = _sliderSpeeds[id];
           if (!speed) continue;
+          if (id === _draggingSliderId) continue;
           const slider = document.getElementById(id);
           if (!slider) continue;
           const min = parseFloat(slider.min);
@@ -632,6 +635,7 @@
           }
           _slider = null;
           _pointerId = null;
+          _draggingSliderId = null;
           const p = panel();
           if (p) p.classList.remove('dragging');
         }
@@ -644,6 +648,7 @@
           _pointerId = e.pointerId;
           _startValue = parseFloat(t.value) || 0;
           _startClientX = e.clientX;
+          _draggingSliderId = t.id;
           panel().classList.add('dragging');
           if (t.closest('.speed-row')) {
             const group = t.closest('.slider-group');
