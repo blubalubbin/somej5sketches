@@ -97,6 +97,58 @@
       .speed-play-btn:hover { color: #e0a050; border-color: #e0a050; }
       .slider-group.has-speed .speed-play-btn { color: #e0a050; border-color: #e0a050; }
 
+      /* ── Trim row: cycle-range handles for oscillating sliders ── */
+      .trim-row {
+        display: none;
+        align-items: center;
+        gap: 0.9rem;
+        padding: 0.1rem 0 0.2rem;
+      }
+      .slider-group:hover .trim-row,
+      .slider-group:focus-within .trim-row { display: flex; }
+      #controls-panel:hover .slider-group.has-speed .trim-row { display: none; }
+      #controls-panel:hover .slider-group:hover .trim-row,
+      #controls-panel:hover .slider-group:focus-within .trim-row { display: flex; }
+      #controls-panel.dragging .trim-row { display: none !important; }
+      .trim-label {
+        min-width: 100px;
+        color: #888; font-size: 0.75rem;
+        font-style: italic;
+        padding-left: 0.4rem;
+      }
+      .trim-value {
+        min-width: 52px; text-align: right;
+        color: #888; font-size: 0.75rem;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .trim-range {
+        flex: 1; position: relative;
+        height: 1.4rem; cursor: ew-resize;
+        user-select: none;
+      }
+      .trim-track {
+        position: absolute;
+        left: 0; right: 0; top: 50%;
+        transform: translateY(-50%);
+        height: 4px;
+        background: #333; border-radius: 2px;
+      }
+      .trim-fill {
+        position: absolute; top: 0; height: 100%;
+        background: rgba(88,166,255,0.3);
+        pointer-events: none;
+      }
+      .trim-handle {
+        position: absolute;
+        width: 8px; height: 18px;
+        background: #555; border: 1px solid #777;
+        border-radius: 3px;
+        top: 50%; transform: translate(-50%, -50%);
+        cursor: ew-resize; touch-action: none;
+      }
+      .trim-handle:hover { background: #888; border-color: #aaa; }
+
       /* ── HUD bar ── */
       #hud {
         display: flex; align-items: center;
@@ -158,6 +210,12 @@
     <div id="overlay">
 
       <div id="controls-panel">
+        <div class="ctrl-row" style="margin-bottom:0.75rem;">
+          <span class="ctrl-label" style="color:#555;font-size:0.85rem;">All speeds</span>
+          <div style="flex:1"></div>
+          <span class="ctrl-value"></span>
+          <button class="speed-play-btn" id="pause-all-btn" onclick="pauseAll()">&#9646;&#9646; Pause all</button>
+        </div>
         <div class="ctrl-heading">Rotation axis</div>
 
         <div class="slider-group">
@@ -216,15 +274,26 @@
         <div class="slider-group">
           <div class="ctrl-row">
             <span class="ctrl-label">Exponent (a)</span>
-            <input id="exp-slider" type="range" min="0.1" max="5" step="0.05" value="1"
+            <input id="exp-slider" type="range" min="0.05" max="20" step="0.05" value="1"
               oninput="setCoordExp(this.value);
                        document.getElementById('exp-val').textContent=(+this.value).toFixed(2)">
             <span class="ctrl-value" id="exp-val">1.00</span>
             <button class="speed-play-btn" id="exp-slider-play-btn" onclick="toggleSliderSpeed('exp-slider')">▶</button>
           </div>
+          <div class="trim-row">
+            <span class="trim-label">↕ cycle range</span>
+            <div class="trim-range" id="exp-trim">
+              <div class="trim-track" id="exp-trim-track">
+                <div class="trim-fill" id="exp-trim-fill"></div>
+                <div class="trim-handle" id="exp-trim-lo" data-slider="exp-slider" data-bound="lo"></div>
+                <div class="trim-handle" id="exp-trim-hi" data-slider="exp-slider" data-bound="hi"></div>
+              </div>
+            </div>
+            <span class="trim-value" id="exp-trim-val"></span>
+          </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <input id="exp-slider-speed" type="range" min="-0.1" max="0.1" step="0.001" value="0"
+            <input id="exp-slider-speed" type="range" min="-0.5" max="0.5" step="0.005" value="0"
               oninput="setSliderSpeed('exp-slider', this.value)">
             <span class="speed-value" id="exp-slider-speed-val">0.000</span>
           </div>
@@ -233,15 +302,26 @@
         <div class="slider-group">
           <div class="ctrl-row">
             <span class="ctrl-label">Imaginary (b)</span>
-            <input id="expimag-slider" type="range" min="-10" max="10" step="0.1" value="0"
+            <input id="expimag-slider" type="range" min="-50" max="50" step="0.1" value="0"
               oninput="setCoordExpImag(this.value);
                        document.getElementById('expimag-val').textContent=(+this.value).toFixed(1)">
             <span class="ctrl-value" id="expimag-val">0.0</span>
             <button class="speed-play-btn" id="expimag-slider-play-btn" onclick="toggleSliderSpeed('expimag-slider')">▶</button>
           </div>
+          <div class="trim-row">
+            <span class="trim-label">↕ cycle range</span>
+            <div class="trim-range" id="expimag-trim">
+              <div class="trim-track" id="expimag-trim-track">
+                <div class="trim-fill" id="expimag-trim-fill"></div>
+                <div class="trim-handle" id="expimag-trim-lo" data-slider="expimag-slider" data-bound="lo"></div>
+                <div class="trim-handle" id="expimag-trim-hi" data-slider="expimag-slider" data-bound="hi"></div>
+              </div>
+            </div>
+            <span class="trim-value" id="expimag-trim-val"></span>
+          </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <input id="expimag-slider-speed" type="range" min="-0.5" max="0.5" step="0.005" value="0"
+            <input id="expimag-slider-speed" type="range" min="-2" max="2" step="0.025" value="0"
               oninput="setSliderSpeed('expimag-slider', this.value)">
             <span class="speed-value" id="expimag-slider-speed-val">0.000</span>
           </div>
@@ -307,7 +387,6 @@
         <a class="back" href="../">&#8592; Index</a>
         <button id="mode-btn" onclick="toggle3D()">3D sphere</button>
         <button id="ctrl-btn" onclick="toggleControls()">&#9881; Controls</button>
-        <button id="pause-all-btn" onclick="pauseAll()">&#9646;&#9646; Pause all</button>
         <button id="shot-btn" onclick="exportScreenshot()">&#8595; PNG</button>
         <button id="share-btn" onclick="copyShareLink()">&#128279; Share</button>
         <div>
@@ -328,10 +407,8 @@
         for (const id of Object.keys(_sliderSpeeds)) {
           if (!_sliderSpeeds[id]) continue;
           const speedSlider = document.getElementById(id + '-speed');
-          if (speedSlider) {
-            speedSlider.value = 0;
-            speedSlider.dispatchEvent(new Event('input', { bubbles: true }));
-          }
+          if (speedSlider) speedSlider.value = 0;
+          setSliderSpeed(id, 0);
         }
       }
 
@@ -349,29 +426,60 @@
       const _sliderBounceDir = {};
       // Last non-zero speed per slider (for play/pause resume).
       const _sliderLastSpeeds = {};
-      // Default speeds applied on first ▶ press (roughly 25% of max, same sign = positive).
+      // Default speeds applied on first ▶ press.
       const _sliderDefaultSpeeds = {
         'theta-slider':      0.5,
         'phi-slider':        0.75,
         'rot-offset-slider': 0.05,
-        'exp-slider':        0.025,
-        'expimag-slider':    0.125,
+        'exp-slider':        0.1,
+        'expimag-slider':    0.5,
         'cx-slider':         0.012,
         'cy-slider':         0.012,
         'cz-slider':         0.012,
       };
 
+      // Per-slider oscillation bounds (lo/hi within the slider's full range).
+      // Only exp-slider and expimag-slider have trim UI; others fall back to slider min/max.
+      const _oscBounds = {
+        'exp-slider':     { lo: 0.1,  hi: 5.0  },
+        'expimag-slider': { lo: -10,  hi: 10   },
+      };
+
+      function _getOscBounds(id) {
+        if (_oscBounds[id]) return _oscBounds[id];
+        const s = document.getElementById(id);
+        return s ? { lo: parseFloat(s.min), hi: parseFloat(s.max) } : { lo: 0, hi: 1 };
+      }
+
+      function _updateTrimUI(sliderId) {
+        const prefix = sliderId.replace('-slider', '');
+        const bounds  = _oscBounds[sliderId];
+        const slider  = document.getElementById(sliderId);
+        if (!bounds || !slider) return;
+        const min = parseFloat(slider.min), max = parseFloat(slider.max);
+        const span = max - min;
+        const loFrac = (bounds.lo - min) / span;
+        const hiFrac = (bounds.hi - min) / span;
+        const loEl   = document.getElementById(prefix + '-trim-lo');
+        const hiEl   = document.getElementById(prefix + '-trim-hi');
+        const fillEl = document.getElementById(prefix + '-trim-fill');
+        const valEl  = document.getElementById(prefix + '-trim-val');
+        if (loEl)   loEl.style.left   = (loFrac * 100) + '%';
+        if (hiEl)   hiEl.style.left   = (hiFrac * 100) + '%';
+        if (fillEl) { fillEl.style.left = (loFrac * 100) + '%'; fillEl.style.width = ((hiFrac - loFrac) * 100) + '%'; }
+        if (valEl) {
+          const dec = sliderId === 'exp-slider' ? 2 : 1;
+          valEl.textContent = bounds.lo.toFixed(dec) + ' – ' + bounds.hi.toFixed(dec);
+        }
+      }
+
       function toggleSliderSpeed(targetId) {
         const current = _sliderSpeeds[targetId] || 0;
+        const newSpeed = current !== 0 ? 0
+          : (_sliderLastSpeeds[targetId] ?? _sliderDefaultSpeeds[targetId] ?? 0.01);
         const speedSlider = document.getElementById(targetId + '-speed');
-        if (!speedSlider) return;
-        if (current !== 0) {
-          speedSlider.value = 0;
-        } else {
-          const resume = _sliderLastSpeeds[targetId] ?? _sliderDefaultSpeeds[targetId] ?? 0.01;
-          speedSlider.value = resume;
-        }
-        speedSlider.dispatchEvent(new Event('input', { bubbles: true }));
+        if (speedSlider) speedSlider.value = newSpeed;
+        setSliderSpeed(targetId, newSpeed);
       }
 
       function setSliderSpeed(targetId, speedVal) {
@@ -405,14 +513,15 @@
           if (span <= 0) continue;
           let v = parseFloat(slider.value);
           if (_OSCILLATE_IDS.has(id)) {
-            // Oscillate: direction tracks independently of speed sign so that
-            // negative speed values don't cause the slider to stick at the min.
+            // Oscillate within the trim bounds (falls back to slider min/max).
+            const ob  = _getOscBounds(id);
+            const lo  = Math.max(min, ob.lo), hi = Math.min(max, ob.hi);
             if (_sliderBounceDir[id] === undefined) _sliderBounceDir[id] = 1;
             let dir = _sliderBounceDir[id];
             v += Math.abs(speed) * dir;
-            if (v > max) { v = 2 * max - v; dir = -1; }
-            else if (v < min) { v = 2 * min - v; dir = 1; }
-            v = Math.max(min, Math.min(max, v));
+            if (v > hi) { v = 2 * hi - v; dir = -1; }
+            else if (v < lo) { v = 2 * lo - v; dir = 1; }
+            v = Math.max(lo, Math.min(hi, v));
             _sliderBounceDir[id] = dir;
           } else {
             // Wrap within bounds (rotation slider and others).
@@ -429,6 +538,51 @@
       (function _cycleLoop() {
         _advanceSliders();
         requestAnimationFrame(_cycleLoop);
+      })();
+
+      // ── Trim handle drag: set oscillation bounds ────────────────────────
+      (function () {
+        let _active = null; // { sliderId, bound, pointerId, startFrac, startX, trackRect }
+
+        document.addEventListener('pointerdown', e => {
+          const h = e.target;
+          if (!h.classList.contains('trim-handle')) return;
+          const sliderId = h.dataset.slider;
+          const bound    = h.dataset.bound;
+          const track    = document.getElementById(sliderId.replace('-slider', '-trim-track'));
+          if (!track || !_oscBounds[sliderId]) return;
+          const slider   = document.getElementById(sliderId);
+          const min = parseFloat(slider.min), max = parseFloat(slider.max);
+          const val = bound === 'lo' ? _oscBounds[sliderId].lo : _oscBounds[sliderId].hi;
+          _active = { sliderId, bound, pointerId: e.pointerId,
+                      startFrac: (val - min) / (max - min), startX: e.clientX,
+                      trackEl: track };
+          try { h.setPointerCapture(e.pointerId); } catch (_) {}
+          e.preventDefault();
+          e.stopPropagation();
+        });
+
+        document.addEventListener('pointermove', e => {
+          if (!_active || e.pointerId !== _active.pointerId) return;
+          const { sliderId, bound, startFrac, startX, trackEl } = _active;
+          const rect   = trackEl.getBoundingClientRect();
+          if (rect.width <= 0) return;
+          const slider = document.getElementById(sliderId);
+          const min = parseFloat(slider.min), max = parseFloat(slider.max);
+          const step = parseFloat(slider.step) || 0.01;
+          const span = max - min;
+          let frac = Math.max(0, Math.min(1, startFrac + (e.clientX - startX) / rect.width));
+          let v = min + Math.round((frac * span) / step) * step;
+          const ob = _oscBounds[sliderId];
+          if (bound === 'lo') ob.lo = Math.min(v, ob.hi - step);
+          else                ob.hi = Math.max(v, ob.lo + step);
+          _updateTrimUI(sliderId);
+          e.preventDefault();
+        });
+
+        ['pointerup', 'pointercancel'].forEach(ev =>
+          document.addEventListener(ev, e => { if (_active && e.pointerId === _active.pointerId) _active = null; })
+        );
       })();
 
       // ── Slider drag handling (delta-based, no jump on click) ────────────
@@ -794,7 +948,10 @@
         }
       }
 
-      window.addEventListener('load', () => setTimeout(_syncControlsFromState, 0));
+      window.addEventListener('load', () => {
+        setTimeout(_syncControlsFromState, 0);
+        setTimeout(() => { _updateTrimUI('exp-slider'); _updateTrimUI('expimag-slider'); }, 0);
+      });
     </script>
   </body>
 </html>
