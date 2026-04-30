@@ -196,11 +196,11 @@
 
         <div class="slider-group">
           <div class="ctrl-row">
-            <span class="ctrl-label">Drag offset</span>
-            <input id="rot-offset-slider" type="range" min="-12.566" max="12.566" step="0.01" value="0"
+            <span class="ctrl-label">Rotation about axis</span>
+            <input id="rot-offset-slider" type="range" min="0" max="6.2832" step="0.01" value="0"
               oninput="setRotOffset(this.value);
-                       document.getElementById('rot-offset-val').textContent=(+this.value).toFixed(2)">
-            <span class="ctrl-value" id="rot-offset-val">0.00</span>
+                       document.getElementById('rot-offset-val').textContent=(+this.value*180/Math.PI).toFixed(1)+'°'">
+            <span class="ctrl-value" id="rot-offset-val">0.0°</span>
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
@@ -323,6 +323,10 @@
       // toggle. The speed slider lives in a sub-row that appears on hover,
       // and stays visible whenever speed is non-zero so it's easy to find.
       const _sliderSpeeds = {};
+      // Sliders that oscillate (bounce) at boundaries rather than wrapping.
+      const _OSCILLATE_IDS = new Set(['exp-slider', 'expimag-slider', 'cx-slider', 'cy-slider', 'cz-slider']);
+      // Per-slider direction multiplier for oscillation (+1 or -1).
+      const _sliderBounceDir = {};
 
       function setSliderSpeed(targetId, speedVal) {
         const speed = parseFloat(speedVal) || 0;
@@ -350,11 +354,22 @@
           const step = parseFloat(slider.step) || 0;
           const span = max - min;
           if (span <= 0) continue;
-          let v = parseFloat(slider.value) + speed;
-          // Wrap within bounds
-          if (v > max)      v = min + ((v - min) % span);
-          else if (v < min) v = max - ((min - v) % span);
-          if (step > 0)     v = min + Math.round((v - min) / step) * step;
+          let v = parseFloat(slider.value);
+          if (_OSCILLATE_IDS.has(id)) {
+            // Oscillate: bounce direction at each boundary.
+            let dir = _sliderBounceDir[id] ?? 1;
+            v += speed * dir;
+            if (v > max) { v = 2 * max - v; dir = -1; }
+            else if (v < min) { v = 2 * min - v; dir = 1; }
+            v = Math.max(min, Math.min(max, v));
+            _sliderBounceDir[id] = dir;
+          } else {
+            // Wrap within bounds (rotation slider and others).
+            v += speed;
+            if (v > max)      v = min + ((v - min) % span);
+            else if (v < min) v = max - ((min - v) % span);
+          }
+          if (step > 0) v = min + Math.round((v - min) / step) * step;
           slider.value = v;
           slider.dispatchEvent(new Event('input', { bubbles: true }));
         }
@@ -386,10 +401,20 @@
           const min  = parseFloat(slider.min);
           const max  = parseFloat(slider.max);
           const step = parseFloat(slider.step) || 0;
+          const span = max - min;
           const ratio = deltaX / rect.width;
-          let v = _startValue + ratio * (max - min);
+          let v = _startValue + ratio * span;
           if (step > 0) v = min + Math.round((v - min) / step) * step;
-          v = Math.max(min, Math.min(max, v));
+          if (slider.id === 'rot-offset-slider') {
+            // Wrap: loop back around at each end.
+            v = min + ((v - min) % span + span) % span;
+          } else if (_OSCILLATE_IDS.has(slider.id)) {
+            // Oscillate: reflect at each boundary.
+            const t = ((v - min) % (2 * span) + 2 * span) % (2 * span);
+            v = t <= span ? min + t : max - (t - span);
+          } else {
+            v = Math.max(min, Math.min(max, v));
+          }
           const decimals = (step > 0 && step < 1) ? Math.min(6, Math.ceil(-Math.log10(step))) : 0;
           const str = decimals > 0 ? v.toFixed(decimals) : String(Math.round(v));
           if (slider.value !== str) {
@@ -462,16 +487,16 @@
           if (!_active || e.pointerId !== _pid) return;
           const w = window.innerWidth || 1;
           const newOffset = _startOffset + (e.clientX - _startX) / w * 8 * Math.PI;
-          // Clamp to slider range so the slider value stays in sync.
+          // Wrap to slider range so the slider value stays in sync.
           const slider = document.getElementById('rot-offset-slider');
-          let v = newOffset;
           if (slider) {
             const min = parseFloat(slider.min), max = parseFloat(slider.max);
-            v = Math.max(min, Math.min(max, v));
+            const span = max - min;
+            const v = min + ((newOffset - min) % span + span) % span;
             slider.value = v;
             slider.dispatchEvent(new Event('input', { bubbles: true }));
           } else if (typeof rotOffset !== 'undefined') {
-            rotOffset = v;
+            rotOffset = newOffset;
           }
         });
 
@@ -584,7 +609,7 @@
         row('axis θ',     deg(axisTheta));
         row('axis φ',     deg(axisPhi));
         row('spin rate',  rotSpeed.toFixed(3) + ' rad/fr');
-        row('drag offset', rotOffset.toFixed(2) + ' rad');
+        row('rotation', (rotOffset * 180 / Math.PI).toFixed(1) + '°');
         row('exp a',      coordExp.toFixed(2));
         row('exp b',      coordExpImag.toFixed(1));
         row('centre x',   coordCenterX.toFixed(2));
@@ -693,7 +718,7 @@
         setSlider('speed-slider', rotSpeed);
         setLabel ('speed-val',    rotSpeed.toFixed(3));
         setSlider('rot-offset-slider', rotOffset);
-        setLabel ('rot-offset-val',    rotOffset.toFixed(2));
+        setLabel ('rot-offset-val',    (rotOffset * 180 / Math.PI).toFixed(1) + '°');
         setSlider('exp-slider',   coordExp);
         setLabel ('exp-val',      coordExp.toFixed(2));
         setSlider('expimag-slider', coordExpImag);
