@@ -66,6 +66,7 @@
       .slider-group:hover .speed-row,
       .slider-group:focus-within .speed-row,
       .slider-group.has-speed .speed-row { display: flex; }
+      #controls-panel.dragging .speed-row { display: none !important; }
       .speed-label {
         min-width: 100px;
         color: #888; font-size: 0.75rem;
@@ -175,22 +176,6 @@
             <input id="phi-slider-speed" type="range" min="-3" max="3" step="0.05" value="0"
               oninput="setSliderSpeed('phi-slider', this.value)">
             <span class="speed-value" id="phi-slider-speed-val">0.00</span>
-          </div>
-        </div>
-
-        <div class="slider-group">
-          <div class="ctrl-row">
-            <span class="ctrl-label">Spin rate</span>
-            <input id="speed-slider" type="range" min="0" max="0.05" step="0.001" value="0.01"
-              oninput="setRotSpeed(this.value);
-                       document.getElementById('speed-val').textContent=(+this.value).toFixed(3)">
-            <span class="ctrl-value" id="speed-val">0.010</span>
-          </div>
-          <div class="speed-row">
-            <span class="speed-label">↻ speed</span>
-            <input id="speed-slider-speed" type="range" min="-0.001" max="0.001" step="0.00005" value="0"
-              oninput="setSliderSpeed('speed-slider', this.value)">
-            <span class="speed-value" id="speed-slider-speed-val">0.0000</span>
           </div>
         </div>
 
@@ -608,7 +593,6 @@
         row('mode',       mode3D ? '3D sphere' : 'flat map');
         row('axis θ',     deg(axisTheta));
         row('axis φ',     deg(axisPhi));
-        row('spin rate',  rotSpeed.toFixed(3) + ' rad/fr');
         row('rotation', (rotOffset * 180 / Math.PI).toFixed(1) + '°');
         row('exp a',      coordExp.toFixed(2));
         row('exp b',      coordExpImag.toFixed(1));
@@ -715,8 +699,6 @@
         setLabel ('theta-val',    tDeg.toFixed(1) + '°');
         setSlider('phi-slider',   pDeg.toFixed(1));
         setLabel ('phi-val',      pDeg.toFixed(1) + '°');
-        setSlider('speed-slider', rotSpeed);
-        setLabel ('speed-val',    rotSpeed.toFixed(3));
         setSlider('rot-offset-slider', rotOffset);
         setLabel ('rot-offset-val',    (rotOffset * 180 / Math.PI).toFixed(1) + '°');
         setSlider('exp-slider',   coordExp);

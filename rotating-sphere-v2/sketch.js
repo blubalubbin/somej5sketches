@@ -8,7 +8,6 @@ let sphereR;
 // Rotation-axis spherical coordinates
 let axisTheta    = Math.acos(Math.sqrt(3) / 3); // polar  (~54.7°)
 let axisPhi      = Math.PI / 4;                  // azimuthal (45°)
-let rotSpeed     = 0.01;                         // rad / frame
 
 // Colour-warp exponent  z^(a+ib)
 let coordExp     = 1.0;
@@ -48,7 +47,7 @@ function windowResized() {
 }
 
 function draw() {
-  const theta = frameCount * rotSpeed + rotOffset;
+  const theta = rotOffset;
   buildRotationMatrix(RM, rotationVector, theta);
   if (mode3D) {
     renderSphere3D(UVmap, RM, sphereR, width / 2, height / 2);
@@ -79,7 +78,6 @@ function updateRotationVector() {
 
 function setAxisTheta(deg)    { axisTheta    = deg * Math.PI / 180; updateRotationVector(); }
 function setAxisPhi(deg)      { axisPhi      = deg * Math.PI / 180; updateRotationVector(); }
-function setRotSpeed(val)     { rotSpeed     = parseFloat(val); }
 function setCoordExp(val)     { coordExp     = parseFloat(val); }
 function setCoordExpImag(val) { coordExpImag = parseFloat(val); }
 function setCoordCenterX(val) { coordCenterX = parseFloat(val); }
@@ -92,7 +90,6 @@ function getSettings() {
   return {
     t:  +(axisTheta * 180 / Math.PI).toFixed(2),
     p:  +(axisPhi   * 180 / Math.PI).toFixed(2),
-    s:  +rotSpeed.toFixed(4),
     a:  +coordExp.toFixed(3),
     b:  +coordExpImag.toFixed(2),
     cx: +coordCenterX.toFixed(3),
@@ -129,7 +126,6 @@ function applySettingsFromHash() {
   const num = (v, fb) => { const n = parseFloat(v); return Number.isFinite(n) ? n : fb; };
   if ('t'  in s) axisTheta    = num(s.t,  axisTheta * 180 / Math.PI) * Math.PI / 180;
   if ('p'  in s) axisPhi      = num(s.p,  axisPhi   * 180 / Math.PI) * Math.PI / 180;
-  if ('s'  in s) rotSpeed     = num(s.s,  rotSpeed);
   if ('a'  in s) coordExp     = num(s.a,  coordExp);
   if ('b'  in s) coordExpImag = num(s.b,  coordExpImag);
   if ('cx' in s) coordCenterX = num(s.cx, coordCenterX);
