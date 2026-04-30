@@ -248,16 +248,46 @@
         if (open) _miniKick();
       }
 
-      // ── Fade panel while a slider is being dragged ──────────────────────
-      // Pointer events cover mouse + touch + pen. The panel only swaps to
-      // the .dragging class; CSS handles the actual fade.
+      // ── Slider drag handling ────────────────────────────────────────────
+      // Native <input type="range"> only reliably drags from the thumb; on
+      // many browsers a click on the track jumps the value but does not
+      // continue tracking the pointer. We take over: any pointerdown inside
+      // a range input is captured to that input, and pointermove sets the
+      // value from the pointer X. The inline `oninput` handlers fire via a
+      // dispatched 'input' event, so display labels and state setters keep
+      // working.
+      //
+      // While dragging, the controls panel fades to ~8% opacity so the
+      // sphere underneath stays visible.
       (function () {
         const panel = () => document.getElementById('controls-panel');
-        let _activeSlider = null;
+        let _slider = null;
+        let _pointerId = null;
 
-        function clearDragging() {
-          if (!_activeSlider) return;
-          _activeSlider = null;
+        function setFromPointer(slider, clientX) {
+          const rect = slider.getBoundingClientRect();
+          if (rect.width <= 0) return;
+          const min  = parseFloat(slider.min);
+          const max  = parseFloat(slider.max);
+          const step = parseFloat(slider.step) || 0;
+          const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+          let v = min + ratio * (max - min);
+          if (step > 0) v = min + Math.round((v - min) / step) * step;
+          v = Math.max(min, Math.min(max, v));
+          const decimals = (step > 0 && step < 1) ? Math.min(6, Math.ceil(-Math.log10(step))) : 0;
+          const str = decimals > 0 ? v.toFixed(decimals) : String(Math.round(v));
+          if (slider.value !== str) {
+            slider.value = str;
+            slider.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }
+
+        function endDrag() {
+          if (_slider && _pointerId != null) {
+            try { _slider.releasePointerCapture(_pointerId); } catch (_) {}
+          }
+          _slider = null;
+          _pointerId = null;
           const p = panel();
           if (p) p.classList.remove('dragging');
         }
@@ -266,17 +296,26 @@
           const t = e.target;
           if (!(t instanceof HTMLInputElement) || t.type !== 'range') return;
           if (!t.closest('#controls-panel')) return;
-          _activeSlider = t;
+          _slider = t;
+          _pointerId = e.pointerId;
           panel().classList.add('dragging');
-        }, true);
+          try { t.setPointerCapture(e.pointerId); } catch (_) {}
+          setFromPointer(t, e.clientX);
+          e.preventDefault();
+        });
+
+        document.addEventListener('pointermove', e => {
+          if (_slider && e.pointerId === _pointerId) {
+            setFromPointer(_slider, e.clientX);
+            e.preventDefault();
+          }
+        });
 
         ['pointerup', 'pointercancel'].forEach(ev =>
-          window.addEventListener(ev, clearDragging, true)
+          document.addEventListener(ev, e => {
+            if (_slider && e.pointerId === _pointerId) endDrag();
+          })
         );
-        // Safety: if focus leaves the slider (e.g. iOS scroll cancel) drop the state.
-        document.addEventListener('blur', e => {
-          if (e.target === _activeSlider) clearDragging();
-        }, true);
       })();
 
       // ── Screenshot export ───────────────────────────────────────────────
@@ -285,43 +324,65 @@
       // than html2canvas'd so it stays crisp at any resolution.
 
       function exportScreenshot() {
-        const p5canvas = document.querySelector('canvas');
-        if (!p5canvas) return;
+        showToast('Saving PNG…');
+        console.info('[png] export start');
+        try {
+          const p5canvas = document.querySelector('canvas');
+          if (!p5canvas) { showToast('PNG failed: no canvas'); return; }
 
-        const SPHERE_SIZE = 720;
-        const PANEL_W     = 480;
-        const H           = SPHERE_SIZE;
-        const W           = SPHERE_SIZE + PANEL_W;
+          const SPHERE_SIZE = 720;
+          const PANEL_W     = 480;
+          const H           = SPHERE_SIZE;
+          const W           = SPHERE_SIZE + PANEL_W;
 
-        const out = document.createElement('canvas');
-        out.width = W; out.height = H;
-        const ctx = out.getContext('2d');
+          const out = document.createElement('canvas');
+          out.width = W; out.height = H;
+          const ctx = out.getContext('2d');
 
-        // Background.
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, W, H);
+          ctx.fillStyle = '#000';
+          ctx.fillRect(0, 0, W, H);
 
-        // Sphere area: scale the live canvas to fit the SPHERE_SIZE box,
-        // preserving aspect ratio and centring inside the box.
-        const sw = p5canvas.width, sh = p5canvas.height;
-        const scale = Math.min(SPHERE_SIZE / sw, SPHERE_SIZE / sh);
-        const dw = sw * scale, dh = sh * scale;
-        const dx = (SPHERE_SIZE - dw) / 2;
-        const dy = (H - dh) / 2;
-        ctx.drawImage(p5canvas, dx, dy, dw, dh);
+          const sw = p5canvas.width, sh = p5canvas.height;
+          const scale = Math.min(SPHERE_SIZE / sw, SPHERE_SIZE / sh);
+          const dw = sw * scale, dh = sh * scale;
+          const dx = (SPHERE_SIZE - dw) / 2;
+          const dy = (H - dh) / 2;
+          ctx.drawImage(p5canvas, dx, dy, dw, dh);
 
-        _drawSettingsPanel(ctx, SPHERE_SIZE, 0, PANEL_W, H);
+          _drawSettingsPanel(ctx, SPHERE_SIZE, 0, PANEL_W, H);
 
-        out.toBlob(blob => {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `rotating-sphere-v2-${Date.now()}.png`;
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(url), 2000);
-        }, 'image/png');
+          const triggerDownload = url => {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rotating-sphere-v2-${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          };
 
-        showToast('Screenshot saved');
+          if (out.toBlob) {
+            out.toBlob(blob => {
+              try {
+                if (!blob) throw new Error('toBlob returned null');
+                const url = URL.createObjectURL(blob);
+                triggerDownload(url);
+                setTimeout(() => URL.revokeObjectURL(url), 2000);
+                showToast('PNG saved');
+                console.info('[png] saved', { bytes: blob.size });
+              } catch (err) {
+                console.error('[png] save error', err);
+                showToast('PNG save failed: ' + err.message);
+              }
+            }, 'image/png');
+          } else {
+            // Older browsers — fall back to data URL.
+            triggerDownload(out.toDataURL('image/png'));
+            showToast('PNG saved');
+          }
+        } catch (err) {
+          console.error('[png] capture error', err);
+          showToast('PNG failed: ' + err.message);
+        }
       }
 
       function _drawSettingsPanel(ctx, x, y, w, h) {
@@ -363,15 +424,19 @@
         row('centre z',   coordCenterZ.toFixed(2));
 
         // Footer: shareable link reproducing this exact frame's settings.
-        ctx.font = '12px monospace';
-        ctx.fillStyle = '#6e7681';
-        const link = _shareUrl();
-        const maxW = w - (px - x) * 2;
-        const lines = _wrapText(ctx, link, maxW);
-        let fy = y + h - 18 - Math.max(0, (lines.length - 1)) * 16;
-        ctx.fillText('share link:', px, fy - 18);
-        ctx.fillStyle = '#8b949e';
-        for (const ln of lines) { ctx.fillText(ln, px, fy); fy += 16; }
+        try {
+          ctx.font = '12px monospace';
+          ctx.fillStyle = '#6e7681';
+          const link  = _shareUrl();
+          const maxW  = w - (px - x) * 2;
+          const lines = _wrapText(ctx, link, maxW);
+          let fy = y + h - 18 - Math.max(0, (lines.length - 1)) * 16;
+          ctx.fillText('share link:', px, fy - 18);
+          ctx.fillStyle = '#8b949e';
+          for (const ln of lines) { ctx.fillText(ln, px, fy); fy += 16; }
+        } catch (err) {
+          console.warn('[png] could not draw share footer', err);
+        }
       }
 
       function _wrapText(ctx, text, maxW) {
@@ -398,14 +463,29 @@
       }
 
       function copyShareLink() {
-        const url = _shareUrl();
-        // Update the current page URL too so a refresh keeps the settings.
-        try { history.replaceState(null, '', '#' + encodeSettings()); } catch (e) {}
+        showToast('Copying link…');
+        console.info('[share] copy start');
+        let url;
+        try {
+          url = _shareUrl();
+          // Update the current page URL too so a refresh keeps the settings.
+          try { history.replaceState(null, '', '#' + encodeSettings()); } catch (_) {}
+        } catch (err) {
+          console.error('[share] build url error', err);
+          showToast('Share failed: ' + err.message);
+          return;
+        }
 
-        const finish = ok => showToast(ok ? 'Link copied to clipboard' : 'Copy failed — link in URL bar');
+        const finish = ok => {
+          console.info('[share] result', ok ? 'copied' : 'fallback-failed');
+          showToast(ok ? 'Link copied to clipboard' : 'Copy blocked — link is in the address bar');
+        };
 
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(url).then(() => finish(true), () => _fallbackCopy(url, finish));
+        if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+          navigator.clipboard.writeText(url).then(
+            () => finish(true),
+            err => { console.warn('[share] clipboard API failed, falling back', err); _fallbackCopy(url, finish); }
+          );
         } else {
           _fallbackCopy(url, finish);
         }
