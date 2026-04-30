@@ -302,7 +302,7 @@
         <div class="slider-group">
           <div class="ctrl-row">
             <span class="ctrl-label">Imaginary (b)</span>
-            <input id="expimag-slider" type="range" min="-50" max="50" step="0.1" value="0"
+            <input id="expimag-slider" type="range" min="0" max="50" step="0.1" value="0"
               oninput="setCoordExpImag(this.value);
                        document.getElementById('expimag-val').textContent=(+this.value).toFixed(1)">
             <span class="ctrl-value" id="expimag-val">0.0</span>
@@ -443,7 +443,7 @@
       // Only exp-slider and expimag-slider have trim UI; others fall back to slider min/max.
       const _oscBounds = {
         'exp-slider':     { lo: 0.1,  hi: 5.0  },
-        'expimag-slider': { lo: -10,  hi: 10   },
+        'expimag-slider': { lo: 0,    hi: 10   },
       };
 
       function _getOscBounds(id) {
