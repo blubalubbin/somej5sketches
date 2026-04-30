@@ -66,6 +66,11 @@
       .slider-group:hover .speed-row,
       .slider-group:focus-within .speed-row,
       .slider-group.has-speed .speed-row { display: flex; }
+      /* While hovering the panel, collapse has-speed rows of non-focused groups */
+      #controls-panel:hover .slider-group.has-speed .speed-row { display: none; }
+      #controls-panel:hover .slider-group:hover .speed-row,
+      #controls-panel:hover .slider-group:focus-within .speed-row { display: flex; }
+      /* Also hide during pointer-drag */
       #controls-panel.dragging .speed-row { display: none !important; }
       .speed-label {
         min-width: 100px;
@@ -86,7 +91,7 @@
       .speed-play-btn {
         background: none; border: 1px solid #444; border-radius: 3px;
         cursor: pointer; color: #888; font-size: 0.7rem;
-        padding: 0.1rem 0.35rem; line-height: 1; flex-shrink: 0;
+        padding: 0.35rem 0.65rem; line-height: 1; flex-shrink: 0;
       }
       .speed-play-btn:hover { color: #e0a050; border-color: #e0a050; }
       .slider-group.has-speed .speed-play-btn { color: #e0a050; border-color: #e0a050; }
@@ -301,6 +306,7 @@
         <a class="back" href="../">&#8592; Index</a>
         <button id="mode-btn" onclick="toggle3D()">3D sphere</button>
         <button id="ctrl-btn" onclick="toggleControls()">&#9881; Controls</button>
+        <button id="pause-all-btn" onclick="pauseAll()">&#9646;&#9646; Pause all</button>
         <button id="shot-btn" onclick="exportScreenshot()">&#8595; PNG</button>
         <button id="share-btn" onclick="copyShareLink()">&#128279; Share</button>
         <div>
@@ -315,6 +321,17 @@
       function toggleControls() {
         const open = document.getElementById('controls-panel').classList.toggle('open');
         document.getElementById('ctrl-btn').classList.toggle('active', open);
+      }
+
+      function pauseAll() {
+        for (const id of Object.keys(_sliderSpeeds)) {
+          if (!_sliderSpeeds[id]) continue;
+          const speedSlider = document.getElementById(id + '-speed');
+          if (speedSlider) {
+            speedSlider.value = 0;
+            speedSlider.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }
       }
 
       // ── Slider auto-cycling ─────────────────────────────────────────────
