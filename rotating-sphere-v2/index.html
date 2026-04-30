@@ -83,6 +83,13 @@
         height: 1.4rem;
       }
       .slider-group.has-speed .speed-value { color: #e0a050; }
+      .speed-play-btn {
+        background: none; border: 1px solid #444; border-radius: 3px;
+        cursor: pointer; color: #888; font-size: 0.7rem;
+        padding: 0.1rem 0.35rem; line-height: 1; flex-shrink: 0;
+      }
+      .speed-play-btn:hover { color: #e0a050; border-color: #e0a050; }
+      .slider-group.has-speed .speed-play-btn { color: #e0a050; border-color: #e0a050; }
 
       /* ── HUD bar ── */
       #hud {
@@ -157,6 +164,7 @@
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
+            <button class="speed-play-btn" id="theta-slider-play-btn" onclick="toggleSliderSpeed('theta-slider')">▶</button>
             <input id="theta-slider-speed" type="range" min="-2" max="2" step="0.05" value="0"
               oninput="setSliderSpeed('theta-slider', this.value)">
             <span class="speed-value" id="theta-slider-speed-val">0.00</span>
@@ -173,6 +181,7 @@
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
+            <button class="speed-play-btn" id="phi-slider-play-btn" onclick="toggleSliderSpeed('phi-slider')">▶</button>
             <input id="phi-slider-speed" type="range" min="-3" max="3" step="0.05" value="0"
               oninput="setSliderSpeed('phi-slider', this.value)">
             <span class="speed-value" id="phi-slider-speed-val">0.00</span>
@@ -189,6 +198,7 @@
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
+            <button class="speed-play-btn" id="rot-offset-slider-play-btn" onclick="toggleSliderSpeed('rot-offset-slider')">▶</button>
             <input id="rot-offset-slider-speed" type="range" min="-0.2" max="0.2" step="0.005" value="0"
               oninput="setSliderSpeed('rot-offset-slider', this.value)">
             <span class="speed-value" id="rot-offset-slider-speed-val">0.000</span>
@@ -207,6 +217,7 @@
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
+            <button class="speed-play-btn" id="exp-slider-play-btn" onclick="toggleSliderSpeed('exp-slider')">▶</button>
             <input id="exp-slider-speed" type="range" min="-0.1" max="0.1" step="0.001" value="0"
               oninput="setSliderSpeed('exp-slider', this.value)">
             <span class="speed-value" id="exp-slider-speed-val">0.000</span>
@@ -223,6 +234,7 @@
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
+            <button class="speed-play-btn" id="expimag-slider-play-btn" onclick="toggleSliderSpeed('expimag-slider')">▶</button>
             <input id="expimag-slider-speed" type="range" min="-0.5" max="0.5" step="0.005" value="0"
               oninput="setSliderSpeed('expimag-slider', this.value)">
             <span class="speed-value" id="expimag-slider-speed-val">0.000</span>
@@ -241,6 +253,7 @@
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
+            <button class="speed-play-btn" id="cx-slider-play-btn" onclick="toggleSliderSpeed('cx-slider')">▶</button>
             <input id="cx-slider-speed" type="range" min="-0.05" max="0.05" step="0.001" value="0"
               oninput="setSliderSpeed('cx-slider', this.value)">
             <span class="speed-value" id="cx-slider-speed-val">0.000</span>
@@ -257,6 +270,7 @@
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
+            <button class="speed-play-btn" id="cy-slider-play-btn" onclick="toggleSliderSpeed('cy-slider')">▶</button>
             <input id="cy-slider-speed" type="range" min="-0.05" max="0.05" step="0.001" value="0"
               oninput="setSliderSpeed('cy-slider', this.value)">
             <span class="speed-value" id="cy-slider-speed-val">0.000</span>
@@ -273,6 +287,7 @@
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
+            <button class="speed-play-btn" id="cz-slider-play-btn" onclick="toggleSliderSpeed('cz-slider')">▶</button>
             <input id="cz-slider-speed" type="range" min="-0.05" max="0.05" step="0.001" value="0"
               oninput="setSliderSpeed('cz-slider', this.value)">
             <span class="speed-value" id="cz-slider-speed-val">0.000</span>
@@ -312,10 +327,37 @@
       const _OSCILLATE_IDS = new Set(['exp-slider', 'expimag-slider', 'cx-slider', 'cy-slider', 'cz-slider']);
       // Per-slider direction multiplier for oscillation (+1 or -1).
       const _sliderBounceDir = {};
+      // Last non-zero speed per slider (for play/pause resume).
+      const _sliderLastSpeeds = {};
+      // Default speeds applied on first ▶ press (roughly 25% of max, same sign = positive).
+      const _sliderDefaultSpeeds = {
+        'theta-slider':      0.5,
+        'phi-slider':        0.75,
+        'rot-offset-slider': 0.05,
+        'exp-slider':        0.025,
+        'expimag-slider':    0.125,
+        'cx-slider':         0.012,
+        'cy-slider':         0.012,
+        'cz-slider':         0.012,
+      };
+
+      function toggleSliderSpeed(targetId) {
+        const current = _sliderSpeeds[targetId] || 0;
+        const speedSlider = document.getElementById(targetId + '-speed');
+        if (!speedSlider) return;
+        if (current !== 0) {
+          speedSlider.value = 0;
+        } else {
+          const resume = _sliderLastSpeeds[targetId] ?? _sliderDefaultSpeeds[targetId] ?? 0.01;
+          speedSlider.value = resume;
+        }
+        speedSlider.dispatchEvent(new Event('input', { bubbles: true }));
+      }
 
       function setSliderSpeed(targetId, speedVal) {
         const speed = parseFloat(speedVal) || 0;
         _sliderSpeeds[targetId] = speed;
+        if (speed !== 0) _sliderLastSpeeds[targetId] = speed;
 
         const speedSlider = document.getElementById(targetId + '-speed');
         const valEl = document.getElementById(targetId + '-speed-val');
@@ -324,6 +366,8 @@
           const decimals = (step > 0 && step < 1) ? Math.min(6, Math.ceil(-Math.log10(step))) : 0;
           valEl.textContent = speed.toFixed(decimals);
         }
+        const btn = document.getElementById(targetId + '-play-btn');
+        if (btn) btn.textContent = speed !== 0 ? '⏸' : '▶';
         const group = speedSlider ? speedSlider.closest('.slider-group') : null;
         if (group) group.classList.toggle('has-speed', speed !== 0);
       }
