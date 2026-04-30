@@ -70,8 +70,9 @@
       #controls-panel:hover .slider-group.has-speed .speed-row { display: none; }
       #controls-panel:hover .slider-group:hover .speed-row,
       #controls-panel:hover .slider-group:focus-within .speed-row { display: flex; }
-      /* Also hide during pointer-drag */
+      /* Also hide during pointer-drag, but not if the speed row is the one being dragged */
       #controls-panel.dragging .speed-row { display: none !important; }
+      #controls-panel.dragging .slider-group.dragging-speed .speed-row { display: flex !important; }
       .speed-label {
         min-width: 100px;
         color: #888; font-size: 0.75rem;
@@ -476,6 +477,8 @@
         function endDrag() {
           if (_slider && _pointerId != null) {
             try { _slider.releasePointerCapture(_pointerId); } catch (_) {}
+            const group = _slider.closest('.slider-group');
+            if (group) group.classList.remove('dragging-speed');
           }
           _slider = null;
           _pointerId = null;
@@ -492,6 +495,10 @@
           _startValue = parseFloat(t.value) || 0;
           _startClientX = e.clientX;
           panel().classList.add('dragging');
+          if (t.closest('.speed-row')) {
+            const group = t.closest('.slider-group');
+            if (group) group.classList.add('dragging-speed');
+          }
           try { t.setPointerCapture(e.pointerId); } catch (_) {}
           // Intentionally NO setFromDelta here — value should not jump on click.
           e.preventDefault();
