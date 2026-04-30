@@ -612,11 +612,11 @@
           const ratio = deltaX / rect.width;
           let v = _startValue + ratio * span;
           if (step > 0) v = min + Math.round((v - min) / step) * step;
-          if (_WRAP_IDS.has(slider.id)) {
-            // Wrap: loop back around at each end.
+          if (slider.id === 'rot-offset-slider') {
+            // Rotation about axis wraps on manual drag.
             v = min + ((v - min) % span + span) % span;
           } else {
-            // Clamp at boundaries — oscillate IDs bounce only during auto-cycle, not manual drag.
+            // All other sliders clamp at boundaries on manual drag.
             v = Math.max(min, Math.min(max, v));
           }
           const decimals = (step > 0 && step < 1) ? Math.min(6, Math.ceil(-Math.log10(step))) : 0;
