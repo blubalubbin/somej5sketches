@@ -23,8 +23,13 @@
         background: rgba(0,0,0,0.82);
         backdrop-filter: blur(8px);
         border-top: 1px solid rgba(255,255,255,0.1);
+        transition: opacity 140ms ease;
       }
       #controls-panel.open { display: block; }
+      /* While a slider is being dragged, fade the panel so the sphere
+         underneath is visible. Opacity does not block pointer events, so
+         the slider keeps tracking the drag. */
+      #controls-panel.dragging { opacity: 0.08; }
 
       .ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
       .ctrl-row {
@@ -86,20 +91,51 @@
         white-space: nowrap; flex-shrink: 0;
       }
       #hud button:hover { background: rgba(255,255,255,0.2); }
-      #hud button#gif-btn.recording {
-        background: rgba(255,80,80,0.18);
-        border-color: rgba(255,80,80,0.5);
-        color: #f99;
-      }
       #hud button.active {
         background: rgba(88,166,255,0.18);
         border-color: rgba(88,166,255,0.5);
       }
       .info-name { font-weight: 600; }
       .info-desc { color: #aaa; font-size: 0.9rem; margin-top: 0.25rem; }
+
+      /* small inline button used inside the controls panel */
+      .ctrl-btn {
+        padding: 0.35rem 0.7rem;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 6px;
+        color: #ddd;
+        font-size: 0.85rem;
+        cursor: pointer;
+        min-width: 56px;
+      }
+      .ctrl-btn:hover  { background: rgba(255,255,255,0.16); }
+      .ctrl-btn.active {
+        background: rgba(88,166,255,0.2);
+        border-color: rgba(88,166,255,0.55);
+        color: #cfe3ff;
+      }
+
+      /* transient toast for share-link copy */
+      #toast {
+        position: fixed;
+        left: 50%; top: 1.2rem;
+        transform: translateX(-50%);
+        padding: 0.55rem 0.9rem;
+        background: rgba(20,40,30,0.92);
+        border: 1px solid rgba(120,200,150,0.45);
+        border-radius: 8px;
+        color: #cfead8;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.9rem;
+        z-index: 30;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 180ms ease;
+      }
+      #toast.show { opacity: 1; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
   </head>
   <body>
     <script src="sketch.js"></script>
@@ -119,21 +155,21 @@
 
         <div class="ctrl-row">
           <span class="ctrl-label">Polar (&#952;)</span>
-          <input type="range" min="0" max="180" step="0.1" value="54.7"
+          <input id="theta-slider" type="range" min="0" max="180" step="0.1" value="54.7"
             oninput="setAxisTheta(this.value);
                      document.getElementById('theta-val').textContent=(+this.value).toFixed(1)+'°'">
           <span class="ctrl-value" id="theta-val">54.7°</span>
         </div>
         <div class="ctrl-row">
           <span class="ctrl-label">Azimuth (&#966;)</span>
-          <input type="range" min="0" max="360" step="0.1" value="45.0"
+          <input id="phi-slider" type="range" min="0" max="360" step="0.1" value="45.0"
             oninput="setAxisPhi(this.value);
                      document.getElementById('phi-val').textContent=(+this.value).toFixed(1)+'°'">
           <span class="ctrl-value" id="phi-val">45.0°</span>
         </div>
         <div class="ctrl-row">
           <span class="ctrl-label">Speed</span>
-          <input type="range" min="0" max="0.05" step="0.001" value="0.01"
+          <input id="speed-slider" type="range" min="0" max="0.05" step="0.001" value="0.01"
             oninput="setRotSpeed(this.value);
                      document.getElementById('speed-val').textContent=(+this.value).toFixed(3)">
           <span class="ctrl-value" id="speed-val">0.010</span>
@@ -143,14 +179,22 @@
 
         <div class="ctrl-row">
           <span class="ctrl-label">Exponent (a)</span>
-          <input type="range" min="0.1" max="5" step="0.05" value="1"
+          <input id="exp-slider" type="range" min="0.1" max="5" step="0.05" value="1"
             oninput="setCoordExp(this.value);
                      document.getElementById('exp-val').textContent=(+this.value).toFixed(2)">
           <span class="ctrl-value" id="exp-val">1.00</span>
         </div>
         <div class="ctrl-row">
+          <span class="ctrl-label">Cycle exp</span>
+          <button id="exp-cycle-btn" class="ctrl-btn" onclick="toggleExpCycle()">Off</button>
+          <input id="exp-cycle-speed-slider" type="range" min="0.001" max="0.1" step="0.001" value="0.01"
+            oninput="setExpCycleSpeed(this.value);
+                     document.getElementById('exp-cycle-speed-val').textContent=(+this.value).toFixed(3)">
+          <span class="ctrl-value" id="exp-cycle-speed-val">0.010</span>
+        </div>
+        <div class="ctrl-row">
           <span class="ctrl-label">Imaginary (b)</span>
-          <input type="range" min="-10" max="10" step="0.1" value="0"
+          <input id="expimag-slider" type="range" min="-10" max="10" step="0.1" value="0"
             oninput="setCoordExpImag(this.value);
                      document.getElementById('expimag-val').textContent=(+this.value).toFixed(1)">
           <span class="ctrl-value" id="expimag-val">0.0</span>
@@ -160,21 +204,21 @@
 
         <div class="ctrl-row">
           <span class="ctrl-label" style="color:#f87;">Centre X</span>
-          <input type="range" min="-1" max="1" step="0.01" value="0"
+          <input id="cx-slider" type="range" min="-1" max="1" step="0.01" value="0"
             oninput="setCoordCenterX(this.value);
                      document.getElementById('cx-val').textContent=(+this.value).toFixed(2)">
           <span class="ctrl-value" id="cx-val">0.00</span>
         </div>
         <div class="ctrl-row">
           <span class="ctrl-label" style="color:#8d8;">Centre Y</span>
-          <input type="range" min="-1" max="1" step="0.01" value="0"
+          <input id="cy-slider" type="range" min="-1" max="1" step="0.01" value="0"
             oninput="setCoordCenterY(this.value);
                      document.getElementById('cy-val').textContent=(+this.value).toFixed(2)">
           <span class="ctrl-value" id="cy-val">0.00</span>
         </div>
         <div class="ctrl-row">
           <span class="ctrl-label" style="color:#7cf;">Centre Z</span>
-          <input type="range" min="-1" max="1" step="0.01" value="0"
+          <input id="cz-slider" type="range" min="-1" max="1" step="0.01" value="0"
             oninput="setCoordCenterZ(this.value);
                      document.getElementById('cz-val').textContent=(+this.value).toFixed(2)">
           <span class="ctrl-value" id="cz-val">0.00</span>
@@ -187,13 +231,15 @@
         <a class="back" href="../">&#8592; Index</a>
         <button id="mode-btn" onclick="toggle3D()">3D sphere</button>
         <button id="ctrl-btn" onclick="toggleControls()">&#9881; Controls</button>
-        <button id="gif-btn" onclick="exportGif()">&#8595; GIF</button>
+        <button id="shot-btn" onclick="exportScreenshot()">&#8595; PNG</button>
+        <button id="share-btn" onclick="copyShareLink()">&#128279; Share</button>
         <div>
           <div class="info-name">Rotating sphere v2</div>
           <div class="info-desc">Coord offset shifts the warp origin; exponent applied before renormalisation.</div>
         </div>
       </div>
     </div>
+    <div id="toast" role="status" aria-live="polite"></div>
 
     <script>
       function toggleControls() {
@@ -202,100 +248,248 @@
         if (open) _miniKick();
       }
 
-      // ── GIF export ──────────────────────────────────────────────────────
+      // ── Fade panel while a slider is being dragged ──────────────────────
+      // Pointer events cover mouse + touch + pen. The panel only swaps to
+      // the .dragging class; CSS handles the actual fade.
+      (function () {
+        const panel = () => document.getElementById('controls-panel');
+        let _activeSlider = null;
 
-      let _gifWorkerURL = null;
-      let _gifRecording = false;
+        function clearDragging() {
+          if (!_activeSlider) return;
+          _activeSlider = null;
+          const p = panel();
+          if (p) p.classList.remove('dragging');
+        }
 
-      (async () => {
-        try {
-          const r = await fetch('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js');
-          const t = await r.text();
-          _gifWorkerURL = URL.createObjectURL(new Blob([t], { type: 'text/javascript' }));
-        } catch (e) { console.warn('gif.js worker failed to load:', e); }
+        document.addEventListener('pointerdown', e => {
+          const t = e.target;
+          if (!(t instanceof HTMLInputElement) || t.type !== 'range') return;
+          if (!t.closest('#controls-panel')) return;
+          _activeSlider = t;
+          panel().classList.add('dragging');
+        }, true);
+
+        ['pointerup', 'pointercancel'].forEach(ev =>
+          window.addEventListener(ev, clearDragging, true)
+        );
+        // Safety: if focus leaves the slider (e.g. iOS scroll cancel) drop the state.
+        document.addEventListener('blur', e => {
+          if (e.target === _activeSlider) clearDragging();
+        }, true);
       })();
 
-      function exportGif() {
-        if (_gifRecording) return;
-        if (typeof GIF === 'undefined') { alert('GIF library failed to load — check your connection and refresh.'); return; }
-        if (!_gifWorkerURL) { alert('GIF encoder is still initialising — please try again in a moment.'); return; }
+      // ── Screenshot export ───────────────────────────────────────────────
+      // Composites the current p5 frame next to a settings panel and saves
+      // the result as a PNG. The panel is rendered programmatically rather
+      // than html2canvas'd so it stays crisp at any resolution.
 
-        _gifRecording = true;
-        const btn = document.getElementById('gif-btn');
-        btn.classList.add('recording');
+      function exportScreenshot() {
+        const p5canvas = document.querySelector('canvas');
+        if (!p5canvas) return;
 
-        const TARGET_FPS=15, DURATION=3, TOTAL_FRAMES=TARGET_FPS*DURATION;
-        const FRAME_DELAY=Math.round(1000/TARGET_FPS), MAX_DIM=480;
-        const p5W=(typeof width!=='undefined')?width:window.innerWidth;
-        const p5H=(typeof height!=='undefined')?height:window.innerHeight;
-        let expW,expH;
-        if(p5W>=p5H){expW=MAX_DIM;expH=Math.round(MAX_DIM*p5H/p5W);}
-        else{expH=MAX_DIM;expW=Math.round(MAX_DIM*p5W/p5H);}
+        const SPHERE_SIZE = 720;
+        const PANEL_W     = 480;
+        const H           = SPHERE_SIZE;
+        const W           = SPHERE_SIZE + PANEL_W;
 
-        const exportCanvas=document.createElement('canvas');
-        exportCanvas.width=expW; exportCanvas.height=expH;
-        const exportCtx=exportCanvas.getContext('2d');
+        const out = document.createElement('canvas');
+        out.width = W; out.height = H;
+        const ctx = out.getContext('2d');
 
-        const gif=new GIF({workers:2,quality:10,width:expW,height:expH,workerScript:_gifWorkerURL,repeat:0});
-        gif.on('progress',p=>{btn.textContent=`Encoding… ${Math.round(p*100)}%`;});
-        gif.on('finished',blob=>{
-          const url=URL.createObjectURL(blob);
-          const a=document.createElement('a'); a.href=url; a.download='rotating-sphere-v2.gif'; a.click();
-          setTimeout(()=>URL.revokeObjectURL(url),2000);
-          _gifRecording=false; btn.textContent='↓ GIF'; btn.classList.remove('recording');
-        });
+        // Background.
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, W, H);
 
-        const p5canvas=document.querySelector('canvas');
-        let framesCaptured=0,rafCount=0;
-        const SKIP=Math.max(1,Math.round(60/TARGET_FPS));
-        function captureLoop(){
-          if(rafCount%SKIP===0){
-            exportCtx.drawImage(p5canvas,0,0,expW,expH);
-            gif.addFrame(exportCtx,{copy:true,delay:FRAME_DELAY});
-            framesCaptured++;
-            btn.textContent=`Recording… ${framesCaptured}/${TOTAL_FRAMES}`;
-            if(framesCaptured>=TOTAL_FRAMES){
-              _gifAddParamSummary(exportCtx,gif,expW,expH);
-              btn.textContent='Encoding…'; gif.render(); return;
-            }
+        // Sphere area: scale the live canvas to fit the SPHERE_SIZE box,
+        // preserving aspect ratio and centring inside the box.
+        const sw = p5canvas.width, sh = p5canvas.height;
+        const scale = Math.min(SPHERE_SIZE / sw, SPHERE_SIZE / sh);
+        const dw = sw * scale, dh = sh * scale;
+        const dx = (SPHERE_SIZE - dw) / 2;
+        const dy = (H - dh) / 2;
+        ctx.drawImage(p5canvas, dx, dy, dw, dh);
+
+        _drawSettingsPanel(ctx, SPHERE_SIZE, 0, PANEL_W, H);
+
+        out.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `rotating-sphere-v2-${Date.now()}.png`;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+        }, 'image/png');
+
+        showToast('Screenshot saved');
+      }
+
+      function _drawSettingsPanel(ctx, x, y, w, h) {
+        ctx.fillStyle = '#0d1117';
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = '#58a6ff';
+        ctx.fillRect(x, y, w, 4);
+
+        const px    = x + Math.round(w * 0.07);
+        const valX  = x + Math.round(w * 0.46);
+        const lineH = 30;
+        let cy = y + 56;
+
+        ctx.font = `bold 26px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+        ctx.fillStyle = '#e6edf3';
+        ctx.fillText('Rotating Sphere v2', px, cy);
+        cy += 14;
+        ctx.fillStyle = '#30363d';
+        ctx.fillRect(px, cy, w - (px - x) * 2, 1);
+        cy += 22;
+
+        function row(label, value) {
+          ctx.font = '15px monospace';
+          ctx.fillStyle = '#6e7681'; ctx.fillText(label, px,   cy);
+          ctx.fillStyle = '#58a6ff'; ctx.fillText(value, valX, cy);
+          cy += lineH;
+        }
+
+        const deg = r => (r * 180 / Math.PI).toFixed(1) + '°';
+        row('mode',       mode3D ? '3D sphere' : 'flat map');
+        row('axis θ',     deg(axisTheta));
+        row('axis φ',     deg(axisPhi));
+        row('rot speed',  rotSpeed.toFixed(3) + ' rad/fr');
+        row('exp a',      coordExp.toFixed(2));
+        row('cycle',      expCycling ? `on (Δ${expCycleSpeed.toFixed(3)})` : 'off');
+        row('exp b',      coordExpImag.toFixed(1));
+        row('centre x',   coordCenterX.toFixed(2));
+        row('centre y',   coordCenterY.toFixed(2));
+        row('centre z',   coordCenterZ.toFixed(2));
+
+        // Footer: shareable link reproducing this exact frame's settings.
+        ctx.font = '12px monospace';
+        ctx.fillStyle = '#6e7681';
+        const link = _shareUrl();
+        const maxW = w - (px - x) * 2;
+        const lines = _wrapText(ctx, link, maxW);
+        let fy = y + h - 18 - Math.max(0, (lines.length - 1)) * 16;
+        ctx.fillText('share link:', px, fy - 18);
+        ctx.fillStyle = '#8b949e';
+        for (const ln of lines) { ctx.fillText(ln, px, fy); fy += 16; }
+      }
+
+      function _wrapText(ctx, text, maxW) {
+        const out = [];
+        let buf = '';
+        for (let i = 0; i < text.length; i++) {
+          const ch = text[i];
+          if (ctx.measureText(buf + ch).width > maxW) {
+            out.push(buf);
+            buf = ch;
+          } else {
+            buf += ch;
           }
-          rafCount++;
-          requestAnimationFrame(captureLoop);
         }
-        requestAnimationFrame(captureLoop);
+        if (buf) out.push(buf);
+        return out;
       }
 
-      function _gifAddParamSummary(ctx,gif,w,h){
-        ctx.fillStyle='#0d1117'; ctx.fillRect(0,0,w,h);
-        const barH=Math.max(3,Math.round(h*0.008));
-        ctx.fillStyle='#58a6ff'; ctx.fillRect(0,0,w,barH);
-        const titleSz=Math.max(14,Math.round(w*0.046));
-        const labelSz=Math.max(10,Math.round(w*0.030));
-        const lineH=Math.round(labelSz*2.0);
-        const px=Math.round(w*0.06), valX=px+Math.round(w*0.40);
-        let y=Math.round(h*0.15);
-        ctx.font=`bold ${titleSz}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-        ctx.fillStyle='#e6edf3'; ctx.fillText('Rotating Sphere v2',px,y);
-        y+=Math.round(titleSz*0.55);
-        ctx.fillStyle='#30363d'; ctx.fillRect(px,y,w-px*2,1); y+=Math.round(lineH*0.75);
-        function row(label,value){
-          ctx.font=`${labelSz}px monospace`;
-          ctx.fillStyle='#6e7681'; ctx.fillText(label,px,y);
-          ctx.fillStyle='#58a6ff'; ctx.fillText(value,valX,y);
-          y+=lineH;
-        }
-        const deg=r=>(r*180/Math.PI).toFixed(1)+'°';
-        row('mode',   (typeof mode3D!=='undefined')?(mode3D?'3D sphere':'flat map'):'—');
-        row('axis θ', (typeof axisTheta!=='undefined')?deg(axisTheta):'—');
-        row('axis φ', (typeof axisPhi!=='undefined')?deg(axisPhi):'—');
-        row('speed',  (typeof rotSpeed!=='undefined')?rotSpeed.toFixed(3)+' rad/fr':'—');
-        row('exp a',  (typeof coordExp!=='undefined')?coordExp.toFixed(2):'—');
-        row('exp b',  (typeof coordExpImag!=='undefined')?coordExpImag.toFixed(1):'—');
-        row('ctr x',  (typeof coordCenterX!=='undefined')?coordCenterX.toFixed(2):'—');
-        row('ctr y',  (typeof coordCenterY!=='undefined')?coordCenterY.toFixed(2):'—');
-        row('ctr z',  (typeof coordCenterZ!=='undefined')?coordCenterZ.toFixed(2):'—');
-        gif.addFrame(ctx,{copy:true,delay:3000});
+      // ── Share link ──────────────────────────────────────────────────────
+
+      function _shareUrl() {
+        const base = location.origin + location.pathname;
+        return base + '#' + encodeSettings();
       }
+
+      function copyShareLink() {
+        const url = _shareUrl();
+        // Update the current page URL too so a refresh keeps the settings.
+        try { history.replaceState(null, '', '#' + encodeSettings()); } catch (e) {}
+
+        const finish = ok => showToast(ok ? 'Link copied to clipboard' : 'Copy failed — link in URL bar');
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(() => finish(true), () => _fallbackCopy(url, finish));
+        } else {
+          _fallbackCopy(url, finish);
+        }
+      }
+
+      function _fallbackCopy(text, cb) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          cb(ok);
+        } catch (e) { cb(false); }
+      }
+
+      let _toastTimer = null;
+      function showToast(msg) {
+        const el = document.getElementById('toast');
+        if (!el) return;
+        el.textContent = msg;
+        el.classList.add('show');
+        clearTimeout(_toastTimer);
+        _toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+      }
+
+      // ── Cycle-exponent toggle ───────────────────────────────────────────
+
+      function toggleExpCycle() {
+        setExpCycling(!expCycling);
+        const btn = document.getElementById('exp-cycle-btn');
+        btn.classList.toggle('active', expCycling);
+        btn.textContent = expCycling ? 'On' : 'Off';
+      }
+
+      // ── Hydrate UI controls from the current state ──────────────────────
+      // Runs after p5 setup() has applied any URL-hash overrides, so the
+      // sliders/labels reflect the loaded values.
+      function _syncControlsFromState() {
+        if (typeof axisTheta === 'undefined') return; // sketch not ready
+        const setSlider = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        const setLabel  = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+        const tDeg = axisTheta * 180 / Math.PI;
+        const pDeg = axisPhi   * 180 / Math.PI;
+
+        setSlider('theta-slider', tDeg.toFixed(1));
+        setLabel ('theta-val',    tDeg.toFixed(1) + '°');
+        setSlider('phi-slider',   pDeg.toFixed(1));
+        setLabel ('phi-val',      pDeg.toFixed(1) + '°');
+        setSlider('speed-slider', rotSpeed);
+        setLabel ('speed-val',    rotSpeed.toFixed(3));
+        setSlider('exp-slider',   coordExp);
+        setLabel ('exp-val',      coordExp.toFixed(2));
+        setSlider('expimag-slider', coordExpImag);
+        setLabel ('expimag-val',    coordExpImag.toFixed(1));
+        setSlider('cx-slider', coordCenterX);
+        setLabel ('cx-val',    coordCenterX.toFixed(2));
+        setSlider('cy-slider', coordCenterY);
+        setLabel ('cy-val',    coordCenterY.toFixed(2));
+        setSlider('cz-slider', coordCenterZ);
+        setLabel ('cz-val',    coordCenterZ.toFixed(2));
+        setSlider('exp-cycle-speed-slider', expCycleSpeed);
+        setLabel ('exp-cycle-speed-val',    expCycleSpeed.toFixed(3));
+
+        const cycBtn = document.getElementById('exp-cycle-btn');
+        if (cycBtn) {
+          cycBtn.classList.toggle('active', expCycling);
+          cycBtn.textContent = expCycling ? 'On' : 'Off';
+        }
+        const modeBtn = document.getElementById('mode-btn');
+        if (modeBtn) modeBtn.textContent = mode3D ? 'Flat map' : '3D sphere';
+
+        const axisDisp = document.getElementById('axis-display');
+        if (axisDisp && typeof rotationVector !== 'undefined') {
+          const v = rotationVector;
+          axisDisp.textContent = `${v.x.toFixed(3)}, ${v.y.toFixed(3)}, ${v.z.toFixed(3)}`;
+        }
+      }
+
+      // p5 calls setup() on load; defer hydration until next tick so globals exist.
+      window.addEventListener('load', () => setTimeout(_syncControlsFromState, 0));
 
       // ── Mini sphere preview ─────────────────────────────────────────────
       // Rendered in a fixed XYZ axis frame; sphere composited on top so the
