@@ -162,7 +162,7 @@
         <div class="slider-group">
           <div class="ctrl-row">
             <span class="ctrl-label">Polar (&#952;)</span>
-            <input id="theta-slider" type="range" min="0" max="180" step="0.1" value="54.7"
+            <input id="theta-slider" type="range" min="-180" max="180" step="0.1" value="54.7"
               oninput="setAxisTheta(this.value);
                        document.getElementById('theta-val').textContent=(+this.value).toFixed(1)+'°'">
             <span class="ctrl-value" id="theta-val">54.7°</span>
@@ -340,6 +340,8 @@
       // toggle. The speed slider lives in a sub-row that appears on hover,
       // and stays visible whenever speed is non-zero so it's easy to find.
       const _sliderSpeeds = {};
+      // Sliders that wrap (loop) at boundaries.
+      const _WRAP_IDS = new Set(['rot-offset-slider', 'theta-slider', 'phi-slider']);
       // Sliders that oscillate (bounce) at boundaries rather than wrapping.
       const _OSCILLATE_IDS = new Set(['exp-slider', 'expimag-slider', 'cx-slider', 'cy-slider', 'cz-slider']);
       // Per-slider direction multiplier for oscillation (+1 or -1).
@@ -453,7 +455,7 @@
           const ratio = deltaX / rect.width;
           let v = _startValue + ratio * span;
           if (step > 0) v = min + Math.round((v - min) / step) * step;
-          if (slider.id === 'rot-offset-slider') {
+          if (_WRAP_IDS.has(slider.id)) {
             // Wrap: loop back around at each end.
             v = min + ((v - min) % span + span) % span;
           } else if (_OSCILLATE_IDS.has(slider.id)) {
