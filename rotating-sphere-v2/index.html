@@ -612,11 +612,8 @@
           if (_WRAP_IDS.has(slider.id)) {
             // Wrap: loop back around at each end.
             v = min + ((v - min) % span + span) % span;
-          } else if (_OSCILLATE_IDS.has(slider.id)) {
-            // Oscillate: reflect at each boundary.
-            const t = ((v - min) % (2 * span) + 2 * span) % (2 * span);
-            v = t <= span ? min + t : max - (t - span);
           } else {
+            // Clamp at boundaries — oscillate IDs bounce only during auto-cycle, not manual drag.
             v = Math.max(min, Math.min(max, v));
           }
           const decimals = (step > 0 && step < 1) ? Math.min(6, Math.ceil(-Math.log10(step))) : 0;
