@@ -385,7 +385,6 @@
 
       <div id="hud">
         <a class="back" href="../">&#8592; Index</a>
-        <button id="mode-btn" onclick="toggle3D()">3D sphere</button>
         <button id="ctrl-btn" onclick="toggleControls()">&#9881; Controls</button>
         <button id="shot-btn" onclick="exportScreenshot()">&#8595; PNG</button>
         <button id="share-btn" onclick="copyShareLink()">&#128279; Share</button>
@@ -816,7 +815,6 @@
         }
 
         const deg = r => (r * 180 / Math.PI).toFixed(1) + '°';
-        row('mode',       mode3D ? '3D sphere' : 'flat map');
         row('axis θ',     deg(axisTheta));
         row('axis φ',     deg(axisPhi));
         row('rotation', (rotOffset * 180 / Math.PI).toFixed(1) + '°');
@@ -937,9 +935,6 @@
         setLabel ('cy-val',    coordCenterY.toFixed(2));
         setSlider('cz-slider', coordCenterZ);
         setLabel ('cz-val',    coordCenterZ.toFixed(2));
-
-        const modeBtn = document.getElementById('mode-btn');
-        if (modeBtn) modeBtn.textContent = mode3D ? 'Flat map' : '3D sphere';
 
         const axisDisp = document.getElementById('axis-display');
         if (axisDisp && typeof rotationVector !== 'undefined') {
