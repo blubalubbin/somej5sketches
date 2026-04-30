@@ -32,6 +32,11 @@
       #controls-panel.dragging { opacity: 0.08; }
 
       .ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
+
+      /* ── slider group: main row + collapsible speed sub-row ── */
+      .slider-group { margin-bottom: 0.65rem; }
+      .slider-group > .ctrl-row { margin-bottom: 0; }
+
       .ctrl-row {
         display: flex; align-items: center;
         gap: 0.9rem; margin-bottom: 0.65rem;
@@ -51,18 +56,32 @@
         font-size: 0.85rem; font-family: monospace;
       }
 
-      /* ── mini sphere preview ── */
-      #mini-sphere-wrap {
-        display: flex; flex-direction: column;
-        align-items: center; gap: 0.4rem;
-        padding-bottom: 1.1rem; margin-bottom: 1rem;
-        border-bottom: 1px solid rgba(255,255,255,0.07);
+      /* speed sub-row: appears on hover, or stays open while speed != 0 */
+      .speed-row {
+        display: none;
+        align-items: center;
+        gap: 0.9rem;
+        padding: 0.1rem 0 0.2rem;
       }
-      #mini-sphere { display: block; }
-      .mini-caption {
-        color: #555; font-size: 0.75rem;
-        font-family: monospace; text-align: center;
+      .slider-group:hover .speed-row,
+      .slider-group:focus-within .speed-row,
+      .slider-group.has-speed .speed-row { display: flex; }
+      .speed-label {
+        min-width: 100px;
+        color: #888; font-size: 0.75rem;
+        font-style: italic;
+        padding-left: 0.4rem;
       }
+      .speed-value {
+        min-width: 52px; text-align: right;
+        color: #888; font-size: 0.75rem;
+        font-variant-numeric: tabular-nums;
+      }
+      .speed-row input[type="range"] {
+        accent-color: #e0a050;
+        height: 1.4rem;
+      }
+      .slider-group.has-speed .speed-value { color: #e0a050; }
 
       /* ── HUD bar ── */
       #hud {
@@ -98,24 +117,6 @@
       .info-name { font-weight: 600; }
       .info-desc { color: #aaa; font-size: 0.9rem; margin-top: 0.25rem; }
 
-      /* small inline button used inside the controls panel */
-      .ctrl-btn {
-        padding: 0.35rem 0.7rem;
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.18);
-        border-radius: 6px;
-        color: #ddd;
-        font-size: 0.85rem;
-        cursor: pointer;
-        min-width: 56px;
-      }
-      .ctrl-btn:hover  { background: rgba(255,255,255,0.16); }
-      .ctrl-btn.active {
-        background: rgba(88,166,255,0.2);
-        border-color: rgba(88,166,255,0.55);
-        color: #cfe3ff;
-      }
-
       /* transient toast for share-link copy */
       #toast {
         position: fixed;
@@ -140,88 +141,157 @@
   <body>
     <script src="sketch.js"></script>
 
-    <div id="overlay"
-         onmouseenter="hudFocused=true"  onmouseleave="hudFocused=false"
-         ontouchstart="hudFocused=true"  ontouchend="hudFocused=false">
+    <div id="overlay">
 
       <div id="controls-panel">
-        <!-- ── mini sphere preview ── -->
-        <div id="mini-sphere-wrap">
-          <canvas id="mini-sphere" width="160" height="160"></canvas>
-          <span class="mini-caption">fixed frame &nbsp;·&nbsp; yellow = rotation axis &nbsp;·&nbsp; dashed = rotation equator</span>
-        </div>
-
         <div class="ctrl-heading">Rotation axis</div>
 
-        <div class="ctrl-row">
-          <span class="ctrl-label">Polar (&#952;)</span>
-          <input id="theta-slider" type="range" min="0" max="180" step="0.1" value="54.7"
-            oninput="setAxisTheta(this.value);
-                     document.getElementById('theta-val').textContent=(+this.value).toFixed(1)+'°'">
-          <span class="ctrl-value" id="theta-val">54.7°</span>
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <span class="ctrl-label">Polar (&#952;)</span>
+            <input id="theta-slider" type="range" min="0" max="180" step="0.1" value="54.7"
+              oninput="setAxisTheta(this.value);
+                       document.getElementById('theta-val').textContent=(+this.value).toFixed(1)+'°'">
+            <span class="ctrl-value" id="theta-val">54.7°</span>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="theta-slider-speed" type="range" min="-2" max="2" step="0.05" value="0"
+              oninput="setSliderSpeed('theta-slider', this.value)">
+            <span class="speed-value" id="theta-slider-speed-val">0.00</span>
+          </div>
         </div>
-        <div class="ctrl-row">
-          <span class="ctrl-label">Azimuth (&#966;)</span>
-          <input id="phi-slider" type="range" min="0" max="360" step="0.1" value="45.0"
-            oninput="setAxisPhi(this.value);
-                     document.getElementById('phi-val').textContent=(+this.value).toFixed(1)+'°'">
-          <span class="ctrl-value" id="phi-val">45.0°</span>
+
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <span class="ctrl-label">Azimuth (&#966;)</span>
+            <input id="phi-slider" type="range" min="0" max="360" step="0.1" value="45.0"
+              oninput="setAxisPhi(this.value);
+                       document.getElementById('phi-val').textContent=(+this.value).toFixed(1)+'°'">
+            <span class="ctrl-value" id="phi-val">45.0°</span>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="phi-slider-speed" type="range" min="-3" max="3" step="0.05" value="0"
+              oninput="setSliderSpeed('phi-slider', this.value)">
+            <span class="speed-value" id="phi-slider-speed-val">0.00</span>
+          </div>
         </div>
-        <div class="ctrl-row">
-          <span class="ctrl-label">Speed</span>
-          <input id="speed-slider" type="range" min="0" max="0.05" step="0.001" value="0.01"
-            oninput="setRotSpeed(this.value);
-                     document.getElementById('speed-val').textContent=(+this.value).toFixed(3)">
-          <span class="ctrl-value" id="speed-val">0.010</span>
+
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <span class="ctrl-label">Spin rate</span>
+            <input id="speed-slider" type="range" min="0" max="0.05" step="0.001" value="0.01"
+              oninput="setRotSpeed(this.value);
+                       document.getElementById('speed-val').textContent=(+this.value).toFixed(3)">
+            <span class="ctrl-value" id="speed-val">0.010</span>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="speed-slider-speed" type="range" min="-0.001" max="0.001" step="0.00005" value="0"
+              oninput="setSliderSpeed('speed-slider', this.value)">
+            <span class="speed-value" id="speed-slider-speed-val">0.0000</span>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <span class="ctrl-label">Drag offset</span>
+            <input id="rot-offset-slider" type="range" min="-12.566" max="12.566" step="0.01" value="0"
+              oninput="setRotOffset(this.value);
+                       document.getElementById('rot-offset-val').textContent=(+this.value).toFixed(2)">
+            <span class="ctrl-value" id="rot-offset-val">0.00</span>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="rot-offset-slider-speed" type="range" min="-0.2" max="0.2" step="0.005" value="0"
+              oninput="setSliderSpeed('rot-offset-slider', this.value)">
+            <span class="speed-value" id="rot-offset-slider-speed-val">0.000</span>
+          </div>
         </div>
 
         <div class="ctrl-heading" style="margin-top:1rem;">Colour warp  <span style="font-weight:400;color:#666;font-size:0.85rem;">(applied before normalise)</span></div>
 
-        <div class="ctrl-row">
-          <span class="ctrl-label">Exponent (a)</span>
-          <input id="exp-slider" type="range" min="0.1" max="5" step="0.05" value="1"
-            oninput="setCoordExp(this.value);
-                     document.getElementById('exp-val').textContent=(+this.value).toFixed(2)">
-          <span class="ctrl-value" id="exp-val">1.00</span>
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <span class="ctrl-label">Exponent (a)</span>
+            <input id="exp-slider" type="range" min="0.1" max="5" step="0.05" value="1"
+              oninput="setCoordExp(this.value);
+                       document.getElementById('exp-val').textContent=(+this.value).toFixed(2)">
+            <span class="ctrl-value" id="exp-val">1.00</span>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="exp-slider-speed" type="range" min="-0.1" max="0.1" step="0.001" value="0"
+              oninput="setSliderSpeed('exp-slider', this.value)">
+            <span class="speed-value" id="exp-slider-speed-val">0.000</span>
+          </div>
         </div>
-        <div class="ctrl-row">
-          <span class="ctrl-label">Cycle exp</span>
-          <button id="exp-cycle-btn" class="ctrl-btn" onclick="toggleExpCycle()">Off</button>
-          <input id="exp-cycle-speed-slider" type="range" min="0.001" max="0.1" step="0.001" value="0.01"
-            oninput="setExpCycleSpeed(this.value);
-                     document.getElementById('exp-cycle-speed-val').textContent=(+this.value).toFixed(3)">
-          <span class="ctrl-value" id="exp-cycle-speed-val">0.010</span>
-        </div>
-        <div class="ctrl-row">
-          <span class="ctrl-label">Imaginary (b)</span>
-          <input id="expimag-slider" type="range" min="-10" max="10" step="0.1" value="0"
-            oninput="setCoordExpImag(this.value);
-                     document.getElementById('expimag-val').textContent=(+this.value).toFixed(1)">
-          <span class="ctrl-value" id="expimag-val">0.0</span>
+
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <span class="ctrl-label">Imaginary (b)</span>
+            <input id="expimag-slider" type="range" min="-10" max="10" step="0.1" value="0"
+              oninput="setCoordExpImag(this.value);
+                       document.getElementById('expimag-val').textContent=(+this.value).toFixed(1)">
+            <span class="ctrl-value" id="expimag-val">0.0</span>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="expimag-slider-speed" type="range" min="-0.5" max="0.5" step="0.005" value="0"
+              oninput="setSliderSpeed('expimag-slider', this.value)">
+            <span class="speed-value" id="expimag-slider-speed-val">0.000</span>
+          </div>
         </div>
 
         <div class="ctrl-heading" style="margin-top:1rem;">Coordinate centre  <span style="font-weight:400;color:#666;font-size:0.85rem;">(shift origin before warp)</span></div>
 
-        <div class="ctrl-row">
-          <span class="ctrl-label" style="color:#f87;">Centre X</span>
-          <input id="cx-slider" type="range" min="-1" max="1" step="0.01" value="0"
-            oninput="setCoordCenterX(this.value);
-                     document.getElementById('cx-val').textContent=(+this.value).toFixed(2)">
-          <span class="ctrl-value" id="cx-val">0.00</span>
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <span class="ctrl-label" style="color:#f87;">Centre X</span>
+            <input id="cx-slider" type="range" min="-1" max="1" step="0.01" value="0"
+              oninput="setCoordCenterX(this.value);
+                       document.getElementById('cx-val').textContent=(+this.value).toFixed(2)">
+            <span class="ctrl-value" id="cx-val">0.00</span>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="cx-slider-speed" type="range" min="-0.05" max="0.05" step="0.001" value="0"
+              oninput="setSliderSpeed('cx-slider', this.value)">
+            <span class="speed-value" id="cx-slider-speed-val">0.000</span>
+          </div>
         </div>
-        <div class="ctrl-row">
-          <span class="ctrl-label" style="color:#8d8;">Centre Y</span>
-          <input id="cy-slider" type="range" min="-1" max="1" step="0.01" value="0"
-            oninput="setCoordCenterY(this.value);
-                     document.getElementById('cy-val').textContent=(+this.value).toFixed(2)">
-          <span class="ctrl-value" id="cy-val">0.00</span>
+
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <span class="ctrl-label" style="color:#8d8;">Centre Y</span>
+            <input id="cy-slider" type="range" min="-1" max="1" step="0.01" value="0"
+              oninput="setCoordCenterY(this.value);
+                       document.getElementById('cy-val').textContent=(+this.value).toFixed(2)">
+            <span class="ctrl-value" id="cy-val">0.00</span>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="cy-slider-speed" type="range" min="-0.05" max="0.05" step="0.001" value="0"
+              oninput="setSliderSpeed('cy-slider', this.value)">
+            <span class="speed-value" id="cy-slider-speed-val">0.000</span>
+          </div>
         </div>
-        <div class="ctrl-row">
-          <span class="ctrl-label" style="color:#7cf;">Centre Z</span>
-          <input id="cz-slider" type="range" min="-1" max="1" step="0.01" value="0"
-            oninput="setCoordCenterZ(this.value);
-                     document.getElementById('cz-val').textContent=(+this.value).toFixed(2)">
-          <span class="ctrl-value" id="cz-val">0.00</span>
+
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <span class="ctrl-label" style="color:#7cf;">Centre Z</span>
+            <input id="cz-slider" type="range" min="-1" max="1" step="0.01" value="0"
+              oninput="setCoordCenterZ(this.value);
+                       document.getElementById('cz-val').textContent=(+this.value).toFixed(2)">
+            <span class="ctrl-value" id="cz-val">0.00</span>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="cz-slider-speed" type="range" min="-0.05" max="0.05" step="0.001" value="0"
+              oninput="setSliderSpeed('cz-slider', this.value)">
+            <span class="speed-value" id="cz-slider-speed-val">0.000</span>
+          </div>
         </div>
 
         <div class="axis-readout">axis: (<span id="axis-display">0.577, 0.577, 0.577</span>)</div>
@@ -235,7 +305,7 @@
         <button id="share-btn" onclick="copyShareLink()">&#128279; Share</button>
         <div>
           <div class="info-name">Rotating sphere v2</div>
-          <div class="info-desc">Coord offset shifts the warp origin; exponent applied before renormalisation.</div>
+          <div class="info-desc">Hover any slider to reveal its auto-cycle speed. Drag the canvas to rotate.</div>
         </div>
       </div>
     </div>
@@ -245,17 +315,61 @@
       function toggleControls() {
         const open = document.getElementById('controls-panel').classList.toggle('open');
         document.getElementById('ctrl-btn').classList.toggle('active', open);
-        if (open) _miniKick();
       }
 
-      // ── Slider drag handling ────────────────────────────────────────────
-      // Native <input type="range"> only reliably drags from the thumb; on
-      // many browsers a click on the track jumps the value but does not
-      // continue tracking the pointer. We take over: any pointerdown inside
-      // a range input is captured to that input, and pointermove sets the
-      // value from the pointer X. The inline `oninput` handlers fire via a
-      // dispatched 'input' event, so display labels and state setters keep
-      // working.
+      // ── Slider auto-cycling ─────────────────────────────────────────────
+      // Each slider can have a non-zero "speed" that advances its value every
+      // animation frame. Speed = 0 means off — there is no separate on/off
+      // toggle. The speed slider lives in a sub-row that appears on hover,
+      // and stays visible whenever speed is non-zero so it's easy to find.
+      const _sliderSpeeds = {};
+
+      function setSliderSpeed(targetId, speedVal) {
+        const speed = parseFloat(speedVal) || 0;
+        _sliderSpeeds[targetId] = speed;
+
+        const speedSlider = document.getElementById(targetId + '-speed');
+        const valEl = document.getElementById(targetId + '-speed-val');
+        if (valEl && speedSlider) {
+          const step = parseFloat(speedSlider.step) || 0;
+          const decimals = (step > 0 && step < 1) ? Math.min(6, Math.ceil(-Math.log10(step))) : 0;
+          valEl.textContent = speed.toFixed(decimals);
+        }
+        const group = speedSlider ? speedSlider.closest('.slider-group') : null;
+        if (group) group.classList.toggle('has-speed', speed !== 0);
+      }
+
+      function _advanceSliders() {
+        for (const id in _sliderSpeeds) {
+          const speed = _sliderSpeeds[id];
+          if (!speed) continue;
+          const slider = document.getElementById(id);
+          if (!slider) continue;
+          const min = parseFloat(slider.min);
+          const max = parseFloat(slider.max);
+          const step = parseFloat(slider.step) || 0;
+          const span = max - min;
+          if (span <= 0) continue;
+          let v = parseFloat(slider.value) + speed;
+          // Wrap within bounds
+          if (v > max)      v = min + ((v - min) % span);
+          else if (v < min) v = max - ((min - v) % span);
+          if (step > 0)     v = min + Math.round((v - min) / step) * step;
+          slider.value = v;
+          slider.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+
+      (function _cycleLoop() {
+        _advanceSliders();
+        requestAnimationFrame(_cycleLoop);
+      })();
+
+      // ── Slider drag handling (delta-based, no jump on click) ────────────
+      // Native <input type="range"> jumps to the click position. We override:
+      // pointerdown captures the slider's current value + clientX as a baseline,
+      // and subsequent moves shift the value by (deltaX / width) * range.
+      // No value change happens on pointerdown alone.
       //
       // While dragging, the controls panel fades to ~8% opacity so the
       // sphere underneath stays visible.
@@ -263,15 +377,17 @@
         const panel = () => document.getElementById('controls-panel');
         let _slider = null;
         let _pointerId = null;
+        let _startValue = 0;
+        let _startClientX = 0;
 
-        function setFromPointer(slider, clientX) {
+        function setFromDelta(slider, deltaX) {
           const rect = slider.getBoundingClientRect();
           if (rect.width <= 0) return;
           const min  = parseFloat(slider.min);
           const max  = parseFloat(slider.max);
           const step = parseFloat(slider.step) || 0;
-          const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-          let v = min + ratio * (max - min);
+          const ratio = deltaX / rect.width;
+          let v = _startValue + ratio * (max - min);
           if (step > 0) v = min + Math.round((v - min) / step) * step;
           v = Math.max(min, Math.min(max, v));
           const decimals = (step > 0 && step < 1) ? Math.min(6, Math.ceil(-Math.log10(step))) : 0;
@@ -298,15 +414,17 @@
           if (!t.closest('#controls-panel')) return;
           _slider = t;
           _pointerId = e.pointerId;
+          _startValue = parseFloat(t.value) || 0;
+          _startClientX = e.clientX;
           panel().classList.add('dragging');
           try { t.setPointerCapture(e.pointerId); } catch (_) {}
-          setFromPointer(t, e.clientX);
+          // Intentionally NO setFromDelta here — value should not jump on click.
           e.preventDefault();
         });
 
         document.addEventListener('pointermove', e => {
           if (_slider && e.pointerId === _pointerId) {
-            setFromPointer(_slider, e.clientX);
+            setFromDelta(_slider, e.clientX - _startClientX);
             e.preventDefault();
           }
         });
@@ -314,6 +432,52 @@
         ['pointerup', 'pointercancel'].forEach(ev =>
           document.addEventListener(ev, e => {
             if (_slider && e.pointerId === _pointerId) endDrag();
+          })
+        );
+      })();
+
+      // ── Canvas drag → rotation offset slider ────────────────────────────
+      // Dragging anywhere on the canvas (i.e. outside the overlay) shifts the
+      // rotOffset slider. Horizontal motion across the full window width maps
+      // to 8π of rotation, matching the previous mouseX-based behaviour.
+      (function () {
+        let _active = false;
+        let _startX = 0;
+        let _startOffset = 0;
+        let _pid = null;
+
+        const isInOverlay = el =>
+          el && (el.closest && el.closest('#overlay'));
+
+        document.addEventListener('pointerdown', e => {
+          if (isInOverlay(e.target)) return;
+          if (e.target instanceof HTMLInputElement) return;
+          _active = true;
+          _startX = e.clientX;
+          _startOffset = (typeof rotOffset !== 'undefined') ? rotOffset : 0;
+          _pid = e.pointerId;
+        });
+
+        document.addEventListener('pointermove', e => {
+          if (!_active || e.pointerId !== _pid) return;
+          const w = window.innerWidth || 1;
+          const newOffset = _startOffset + (e.clientX - _startX) / w * 8 * Math.PI;
+          // Clamp to slider range so the slider value stays in sync.
+          const slider = document.getElementById('rot-offset-slider');
+          let v = newOffset;
+          if (slider) {
+            const min = parseFloat(slider.min), max = parseFloat(slider.max);
+            v = Math.max(min, Math.min(max, v));
+            slider.value = v;
+            slider.dispatchEvent(new Event('input', { bubbles: true }));
+          } else if (typeof rotOffset !== 'undefined') {
+            rotOffset = v;
+          }
+        });
+
+        ['pointerup', 'pointercancel'].forEach(ev =>
+          document.addEventListener(ev, e => {
+            if (e.pointerId === _pid) _active = false;
           })
         );
       })();
@@ -327,7 +491,12 @@
         showToast('Saving PNG…');
         console.info('[png] export start');
         try {
-          const p5canvas = document.querySelector('canvas');
+          // p5 assigns id="defaultCanvas0" to its main canvas. Grab that
+          // explicitly so we don't accidentally pick up another <canvas>
+          // (e.g. a helper preview) that lives elsewhere in the DOM.
+          const p5canvas =
+            document.getElementById('defaultCanvas0') ||
+            document.querySelector('body > canvas');
           if (!p5canvas) { showToast('PNG failed: no canvas'); return; }
 
           const SPHERE_SIZE = 720;
@@ -375,7 +544,6 @@
               }
             }, 'image/png');
           } else {
-            // Older browsers — fall back to data URL.
             triggerDownload(out.toDataURL('image/png'));
             showToast('PNG saved');
           }
@@ -415,15 +583,14 @@
         row('mode',       mode3D ? '3D sphere' : 'flat map');
         row('axis θ',     deg(axisTheta));
         row('axis φ',     deg(axisPhi));
-        row('rot speed',  rotSpeed.toFixed(3) + ' rad/fr');
+        row('spin rate',  rotSpeed.toFixed(3) + ' rad/fr');
+        row('drag offset', rotOffset.toFixed(2) + ' rad');
         row('exp a',      coordExp.toFixed(2));
-        row('cycle',      expCycling ? `on (Δ${expCycleSpeed.toFixed(3)})` : 'off');
         row('exp b',      coordExpImag.toFixed(1));
         row('centre x',   coordCenterX.toFixed(2));
         row('centre y',   coordCenterY.toFixed(2));
         row('centre z',   coordCenterZ.toFixed(2));
 
-        // Footer: shareable link reproducing this exact frame's settings.
         try {
           ctx.font = '12px monospace';
           ctx.fillStyle = '#6e7681';
@@ -464,11 +631,9 @@
 
       function copyShareLink() {
         showToast('Copying link…');
-        console.info('[share] copy start');
         let url;
         try {
           url = _shareUrl();
-          // Update the current page URL too so a refresh keeps the settings.
           try { history.replaceState(null, '', '#' + encodeSettings()); } catch (_) {}
         } catch (err) {
           console.error('[share] build url error', err);
@@ -476,10 +641,8 @@
           return;
         }
 
-        const finish = ok => {
-          console.info('[share] result', ok ? 'copied' : 'fallback-failed');
+        const finish = ok =>
           showToast(ok ? 'Link copied to clipboard' : 'Copy blocked — link is in the address bar');
-        };
 
         if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
           navigator.clipboard.writeText(url).then(
@@ -514,20 +677,9 @@
         _toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
       }
 
-      // ── Cycle-exponent toggle ───────────────────────────────────────────
-
-      function toggleExpCycle() {
-        setExpCycling(!expCycling);
-        const btn = document.getElementById('exp-cycle-btn');
-        btn.classList.toggle('active', expCycling);
-        btn.textContent = expCycling ? 'On' : 'Off';
-      }
-
       // ── Hydrate UI controls from the current state ──────────────────────
-      // Runs after p5 setup() has applied any URL-hash overrides, so the
-      // sliders/labels reflect the loaded values.
       function _syncControlsFromState() {
-        if (typeof axisTheta === 'undefined') return; // sketch not ready
+        if (typeof axisTheta === 'undefined') return;
         const setSlider = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
         const setLabel  = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
@@ -540,6 +692,8 @@
         setLabel ('phi-val',      pDeg.toFixed(1) + '°');
         setSlider('speed-slider', rotSpeed);
         setLabel ('speed-val',    rotSpeed.toFixed(3));
+        setSlider('rot-offset-slider', rotOffset);
+        setLabel ('rot-offset-val',    rotOffset.toFixed(2));
         setSlider('exp-slider',   coordExp);
         setLabel ('exp-val',      coordExp.toFixed(2));
         setSlider('expimag-slider', coordExpImag);
@@ -550,14 +704,7 @@
         setLabel ('cy-val',    coordCenterY.toFixed(2));
         setSlider('cz-slider', coordCenterZ);
         setLabel ('cz-val',    coordCenterZ.toFixed(2));
-        setSlider('exp-cycle-speed-slider', expCycleSpeed);
-        setLabel ('exp-cycle-speed-val',    expCycleSpeed.toFixed(3));
 
-        const cycBtn = document.getElementById('exp-cycle-btn');
-        if (cycBtn) {
-          cycBtn.classList.toggle('active', expCycling);
-          cycBtn.textContent = expCycling ? 'On' : 'Off';
-        }
         const modeBtn = document.getElementById('mode-btn');
         if (modeBtn) modeBtn.textContent = mode3D ? 'Flat map' : '3D sphere';
 
@@ -568,201 +715,7 @@
         }
       }
 
-      // p5 calls setup() on load; defer hydration until next tick so globals exist.
       window.addEventListener('load', () => setTimeout(_syncControlsFromState, 0));
-
-      // ── Mini sphere preview ─────────────────────────────────────────────
-      // Rendered in a fixed XYZ axis frame; sphere composited on top so the
-      // axis lines are visible outside the sphere disk.
-
-      let _miniActive = false;
-      let _miniTmpCv  = null;   // temp canvas for compositing sphere pixels
-      let _miniTmpCtx = null;
-
-      function _miniKick() {
-        if (_miniActive) return;
-        _miniActive = true;
-        requestAnimationFrame(_miniLoop);
-      }
-
-      function _miniLoop() {
-        if (!document.getElementById('controls-panel').classList.contains('open')) {
-          _miniActive = false; return;
-        }
-        _miniDraw();
-        requestAnimationFrame(_miniLoop);
-      }
-
-      function _miniDraw() {
-        const cv = document.getElementById('mini-sphere');
-        if (!cv) return;
-        const ctx = cv.getContext('2d');
-        const W = cv.width, H = cv.height;
-        const R = Math.min(W,H) * 0.38;   // slightly smaller to leave room for frame
-        const ox = W/2, oy = H/2, invR = 1/R;
-
-        // Read live globals
-        const tA   = (typeof axisTheta    !=='undefined')?axisTheta   :Math.acos(Math.sqrt(3)/3);
-        const pA   = (typeof axisPhi      !=='undefined')?axisPhi     :Math.PI/4;
-        const spd  = (typeof rotSpeed     !=='undefined')?rotSpeed    :0.01;
-        const a    = (typeof coordExp     !=='undefined')?coordExp    :1;
-        const b    = (typeof coordExpImag !=='undefined')?coordExpImag:0;
-        const cx_  = (typeof coordCenterX !=='undefined')?coordCenterX:0;
-        const cy_  = (typeof coordCenterY !=='undefined')?coordCenterY:0;
-        const cz_  = (typeof coordCenterZ !=='undefined')?coordCenterZ:0;
-        const pure = (a===1 && b===0 && cx_===0 && cy_===0 && cz_===0);
-
-        // Mirror main sketch rotation angle
-        const fc  = (typeof frameCount!=='undefined')?frameCount:0;
-        const lmx = (typeof lastMouseX!=='undefined')?lastMouseX:0;
-        const cw  = (typeof width     !=='undefined')?width     :window.innerWidth;
-        const theta = fc*spd + 8*Math.PI*lmx/cw;
-
-        const sinTA=Math.sin(tA);
-        const rvx=sinTA*Math.cos(pA), rvy=sinTA*Math.sin(pA), rvz=Math.cos(tA);
-
-        const cT=Math.cos(theta),sT=Math.sin(theta),oT=1-cT;
-        const r00=cT+rvx*rvx*oT, r01=rvx*rvy*oT-rvz*sT, r02=rvx*rvz*oT+rvy*sT;
-        const r10=rvy*rvx*oT+rvz*sT, r11=cT+rvy*rvy*oT, r12=rvy*rvz*oT-rvx*sT;
-        const r20=rvz*rvx*oT-rvy*sT, r21=rvz*rvy*oT+rvx*sT, r22=cT+rvz*rvz*oT;
-
-        const idata = ctx.createImageData(W,H);
-        const pxd   = idata.data;
-
-        for (let j=0; j<H; j++) {
-          const rny=( j-oy)*invR, rny2=rny*rny;
-          for (let i=0; i<W; i++) {
-            const pi=(j*W+i)<<2;
-            const rnx=(i-ox)*invR, d2=rnx*rnx+rny2;
-            if (d2>1){pxd[pi+3]=0;continue;}
-            const rnz=Math.sqrt(1-d2);
-
-            // v2 pipeline: offset → warp → normalise
-            let nx_,ny_,nz_;
-            if (pure){
-              nx_=rnx; ny_=rny; nz_=rnz;
-            } else {
-              const wx=warpCoord(rnx-cx_,a,b);
-              const wy=warpCoord(rny-cy_,a,b);
-              const wz=warpCoord(rnz-cz_,a,b);
-              const wlen=Math.sqrt(wx*wx+wy*wy+wz*wz);
-              if(wlen<1e-4){pxd[pi+3]=255;continue;}
-              nx_=wx/wlen; ny_=wy/wlen; nz_=wz/wlen;
-            }
-
-            // Rotate (unit-vector input → unit-vector output, no renorm needed)
-            const ex=r00*nx_+r01*ny_+r02*nz_;
-            const ey=r10*nx_+r11*ny_+r12*nz_;
-            const ez=r20*nx_+r21*ny_+r22*nz_;
-
-            const lat=Math.asin(Math.max(-1,Math.min(1,ez)));
-            const lon=Math.atan2(ey,ex);
-
-            const uG=(lon/Math.PI+1)*4, vG=(lat/(Math.PI/2)+1)*2;
-            const uF=uG-Math.floor(uG), vF=vG-Math.floor(vG);
-            const isGrid=uF<0.08||vF<0.08;
-
-            const diff=0.22+0.78*rnz;
-            let pr,pg,pb;
-            if(isGrid){pr=Math.round(88*diff);pg=Math.round(166*diff);pb=Math.round(255*diff);}
-            else{
-              const tile=(Math.floor(uG)+Math.floor(vG))&1;
-              pr=Math.round((tile?55:22)*diff);
-              pg=Math.round((tile?65:28)*diff);
-              pb=Math.round((tile?85:40)*diff);
-            }
-            pxd[pi]=pr;pxd[pi+1]=pg;pxd[pi+2]=pb;pxd[pi+3]=255;
-          }
-        }
-
-        // ── Composite: draw axis frame first, then sphere on top ──────────
-        if (!_miniTmpCv || _miniTmpCv.width!==W) {
-          _miniTmpCv=document.createElement('canvas');
-          _miniTmpCv.width=W; _miniTmpCv.height=H;
-          _miniTmpCtx=_miniTmpCv.getContext('2d');
-        }
-        _miniTmpCtx.putImageData(idata,0,0);
-
-        ctx.clearRect(0,0,W,H);
-
-        // Fixed axis frame (behind sphere)
-        const fR=R*1.28;
-        ctx.save();
-        ctx.font='9px monospace';
-        ctx.lineWidth=1.5;
-
-        // X axis — red
-        ctx.strokeStyle='rgba(255,100,100,0.6)'; ctx.fillStyle='rgba(255,100,100,0.6)';
-        ctx.beginPath(); ctx.moveTo(ox-fR,oy); ctx.lineTo(ox+fR,oy); ctx.stroke();
-        ctx.fillText('x',ox+fR+3,oy+4);
-
-        // Y axis — green (positive = down in screen)
-        ctx.strokeStyle='rgba(100,210,100,0.6)'; ctx.fillStyle='rgba(100,210,100,0.6)';
-        ctx.beginPath(); ctx.moveTo(ox,oy-fR); ctx.lineTo(ox,oy+fR); ctx.stroke();
-        ctx.fillText('y',ox+4,oy+fR+11);
-
-        // Z axis — blue (toward viewer: dot-in-ring)
-        ctx.strokeStyle='rgba(100,180,255,0.6)'; ctx.fillStyle='rgba(100,180,255,0.6)';
-        ctx.beginPath(); ctx.arc(ox,oy,3,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(ox,oy,7,0,Math.PI*2); ctx.stroke();
-        ctx.fillText('z',ox-20,oy-10);
-
-        ctx.restore();
-
-        // Sphere (pixels outside sphere are alpha=0 → axis lines show through)
-        ctx.drawImage(_miniTmpCv,0,0);
-
-        // ── Rotation equator (dashed ellipse) ─────────────────────────────
-        // Two vectors perpendicular to the rotation axis, projected to screen XY.
-        const axXY=Math.sqrt(rvx*rvx+rvy*rvy);
-        let eux,euy,evx,evy;
-        if(axXY>0.001){
-          eux= rvy/axXY; euy=-rvx/axXY;  // cross(axis,(0,0,1)) normalised
-        } else {
-          eux=1; euy=0;
-        }
-        // cross(axis, e1), only need XY for screen projection
-        evx=-rvz*euy;
-        evy= rvz*eux;
-
-        ctx.save();
-        ctx.strokeStyle='rgba(255,200,50,0.35)';
-        ctx.lineWidth=1; ctx.setLineDash([3,4]);
-        ctx.beginPath();
-        for(let k=0;k<=64;k++){
-          const t=k/64*2*Math.PI;
-          const px2=ox+(eux*Math.cos(t)+evx*Math.sin(t))*R;
-          const py2=oy+(euy*Math.cos(t)+evy*Math.sin(t))*R;
-          k===0?ctx.moveTo(px2,py2):ctx.lineTo(px2,py2);
-        }
-        ctx.stroke();
-
-        // ── Rotation axis arrow ────────────────────────────────────────────
-        const sc=R*1.18;
-        const tipX=ox+rvx*sc,tipY=oy+rvy*sc;
-        const tlX =ox-rvx*sc,tlY =oy-rvy*sc;
-
-        ctx.setLineDash([4,4]);
-        ctx.strokeStyle='rgba(255,200,50,0.5)'; ctx.lineWidth=1.5;
-        ctx.beginPath(); ctx.moveTo(tlX,tlY); ctx.lineTo(ox,oy); ctx.stroke();
-
-        ctx.setLineDash([]);
-        ctx.strokeStyle='rgba(255,200,50,1)'; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(tipX,tipY); ctx.stroke();
-
-        const ang=Math.atan2(tipY-oy,tipX-ox),hl=9,ha=0.42;
-        ctx.fillStyle='rgba(255,200,50,1)';
-        ctx.beginPath();
-        ctx.moveTo(tipX,tipY);
-        ctx.lineTo(tipX-hl*Math.cos(ang-ha),tipY-hl*Math.sin(ang-ha));
-        ctx.lineTo(tipX-hl*Math.cos(ang+ha),tipY-hl*Math.sin(ang+ha));
-        ctx.closePath(); ctx.fill();
-
-        ctx.fillStyle='rgba(255,200,50,0.8)';
-        ctx.beginPath(); ctx.arc(ox,oy,3,0,Math.PI*2); ctx.fill();
-
-        ctx.restore();
-      }
     </script>
   </body>
 </html>

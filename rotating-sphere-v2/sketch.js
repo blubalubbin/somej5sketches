@@ -14,22 +14,14 @@ let rotSpeed     = 0.01;                         // rad / frame
 let coordExp     = 1.0;
 let coordExpImag = 0.0;
 
-// Cyclic auto-increment of the real exponent.
-// When enabled, coordExp advances by expCycleSpeed each frame and wraps
-// from EXP_MAX back to EXP_MIN.
-const EXP_MIN = 0.1;
-const EXP_MAX = 5.0;
-let expCycling    = false;
-let expCycleSpeed = 0.01;
-
 // Coordinate-centre offset — subtracted from each surface normal before warp.
-// Shifting away from zero moves which region of the complex-power function is sampled.
 let coordCenterX = 0.0;
 let coordCenterY = 0.0;
 let coordCenterZ = 0.0;
 
-let hudFocused = false;
-let lastMouseX = 0;
+// Rotation offset controlled by dragging the canvas (radians).
+// Replaces the raw mouseX-based offset.
+let rotOffset = 0.0;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -56,9 +48,7 @@ function windowResized() {
 }
 
 function draw() {
-  if (!hudFocused) lastMouseX = mouseX;
-  if (expCycling) advanceExpCycle();
-  const theta = frameCount * rotSpeed + (8 * Math.PI * lastMouseX / width);
+  const theta = frameCount * rotSpeed + rotOffset;
   buildRotationMatrix(RM, rotationVector, theta);
   if (mode3D) {
     renderSphere3D(UVmap, RM, sphereR, width / 2, height / 2);
@@ -95,28 +85,9 @@ function setCoordExpImag(val) { coordExpImag = parseFloat(val); }
 function setCoordCenterX(val) { coordCenterX = parseFloat(val); }
 function setCoordCenterY(val) { coordCenterY = parseFloat(val); }
 function setCoordCenterZ(val) { coordCenterZ = parseFloat(val); }
-function setExpCycleSpeed(val){ expCycleSpeed= parseFloat(val); }
-function setExpCycling(on)    { expCycling   = !!on; }
-
-// Step coordExp forward and wrap from EXP_MAX back to EXP_MIN. The
-// exponent slider + readout are kept in sync so the user can see the
-// value moving and grab the slider mid-cycle.
-function advanceExpCycle() {
-  const span = EXP_MAX - EXP_MIN;
-  let v = coordExp + expCycleSpeed;
-  if (v > EXP_MAX) v = EXP_MIN + ((v - EXP_MIN) % span);
-  else if (v < EXP_MIN) v = EXP_MAX - ((EXP_MIN - v) % span);
-  coordExp = v;
-  const slider  = document.getElementById('exp-slider');
-  const display = document.getElementById('exp-val');
-  if (slider)  slider.value = v;
-  if (display) display.textContent = v.toFixed(2);
-}
+function setRotOffset(val)    { rotOffset    = parseFloat(val); }
 
 // ── Settings serialization ──────────────────────────────────────────
-// Encoded into the URL hash with short keys so links stay readable:
-//   #t=54.7&p=45.0&s=0.010&a=1.00&b=0.0&cx=0.00&cy=0.00&cz=0.00
-//   &m=0&ec=0&es=0.010
 function getSettings() {
   return {
     t:  +(axisTheta * 180 / Math.PI).toFixed(2),
@@ -127,9 +98,8 @@ function getSettings() {
     cx: +coordCenterX.toFixed(3),
     cy: +coordCenterY.toFixed(3),
     cz: +coordCenterZ.toFixed(3),
+    ro: +rotOffset.toFixed(3),
     m:  mode3D ? 1 : 0,
-    ec: expCycling ? 1 : 0,
-    es: +expCycleSpeed.toFixed(4),
   };
 }
 
@@ -165,9 +135,8 @@ function applySettingsFromHash() {
   if ('cx' in s) coordCenterX = num(s.cx, coordCenterX);
   if ('cy' in s) coordCenterY = num(s.cy, coordCenterY);
   if ('cz' in s) coordCenterZ = num(s.cz, coordCenterZ);
+  if ('ro' in s) rotOffset    = num(s.ro, rotOffset);
   if ('m'  in s) mode3D       = s.m === '1' || s.m === 'true';
-  if ('ec' in s) expCycling   = s.ec === '1' || s.ec === 'true';
-  if ('es' in s) expCycleSpeed= num(s.es, expCycleSpeed);
 }
 
 // Real part of sign(v)·|v|^(a+ib).  At a=1, b=0 this is the identity.
