@@ -32,7 +32,8 @@
       #controls-panel.dragging { opacity: 0.08; }
       #overlay.canvas-dragging { opacity: 0.08; }
       #controls-panel.auto-playing { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
-      #controls-panel.auto-playing:hover { opacity: 1; transition: opacity 0.15s ease; }
+      #controls-panel.auto-playing:hover,
+      #controls-panel.auto-playing.revealed { opacity: 1; transition: opacity 0.15s ease; }
 
       .ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
 
@@ -692,10 +693,24 @@
         }
       }
 
+      let _revealTimer = null;
       function _syncPlayingState() {
         const anyPlaying = Object.values(_sliderSpeeds).some(s => s !== 0);
-        document.getElementById('controls-panel').classList.toggle('auto-playing', anyPlaying);
+        const panel = document.getElementById('controls-panel');
+        panel.classList.toggle('auto-playing', anyPlaying);
+        if (!anyPlaying) panel.classList.remove('revealed');
       }
+
+      // Tap/click the transparent panel to reveal it for 3s (needed on iOS where hover doesn't exist).
+      document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('controls-panel').addEventListener('pointerdown', () => {
+          const panel = document.getElementById('controls-panel');
+          if (!panel.classList.contains('auto-playing')) return;
+          panel.classList.add('revealed');
+          clearTimeout(_revealTimer);
+          _revealTimer = setTimeout(() => panel.classList.remove('revealed'), 3000);
+        }, { passive: true });
+      });
 
       function toggleSliderSpeed(targetId) {
         const current = _sliderSpeeds[targetId] || 0;
