@@ -57,20 +57,18 @@
         font-size: 0.85rem; font-family: monospace;
       }
 
-      /* speed sub-row: appears on hover, or stays open while speed != 0 */
+      /* speed sub-row: visible only while speed != 0 (▶ button starts it) */
       .speed-row {
         display: none;
         align-items: center;
         gap: 0.9rem;
         padding: 0.1rem 0 0.2rem;
       }
-      .slider-group:hover .speed-row,
-      .slider-group:focus-within .speed-row,
       .slider-group.has-speed .speed-row { display: flex; }
-      /* While hovering the panel, collapse has-speed rows of non-focused groups */
+      /* While hovering the panel, collapse has-speed rows not currently hovered */
       #controls-panel:hover .slider-group.has-speed .speed-row { display: none; }
-      #controls-panel:hover .slider-group:hover .speed-row,
-      #controls-panel:hover .slider-group:focus-within .speed-row { display: flex; }
+      #controls-panel:hover .slider-group.has-speed:hover .speed-row,
+      #controls-panel:hover .slider-group.has-speed:focus-within .speed-row { display: flex; }
       /* Also hide during pointer-drag, but not if the speed row is the one being dragged */
       #controls-panel.dragging .speed-row { display: none !important; }
       #controls-panel.dragging .slider-group.dragging-speed .speed-row { display: flex !important; }
@@ -257,7 +255,7 @@
           <div class="info-grid-item"><strong>&#9881; Controls</strong>adjust axis, warp &amp; centre parameters</div>
           <div class="info-grid-item"><strong>&#8595; PNG</strong>export a settings panel + image</div>
           <div class="info-grid-item"><strong>&#128279; Share</strong>copy a link with all current settings</div>
-          <div class="info-grid-item"><strong>Speed sliders</strong>hover any slider to reveal auto-cycle speed</div>
+          <div class="info-grid-item"><strong>▶ button</strong>click to start auto-cycling a slider; click again to stop</div>
           <div class="info-grid-item"><strong>Trim handles</strong>drag the range handles to set cycle bounds</div>
         </div>
       </div>
