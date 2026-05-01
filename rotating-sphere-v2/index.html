@@ -183,6 +183,47 @@
       }
       .info-name { font-weight: 600; }
       .info-desc { color: #aaa; font-size: 0.9rem; margin-top: 0.25rem; }
+      /* hide the hud title block when the info panel is closed */
+      #hud-text { transition: opacity 120ms ease; }
+      #hud-text.hidden { display: none; }
+
+      /* ── Slider hint strip ── */
+      #slider-hint {
+        display: none;
+        width: 100%;
+        font-size: 0.82rem;
+        color: #58a6ff;
+        padding-top: 0.4rem;
+        border-top: 1px solid rgba(255,255,255,0.06);
+      }
+      #slider-hint.visible { display: block; }
+
+      /* ── Info panel ── */
+      #info-panel {
+        display: none;
+        padding: 1rem 1.25rem 1.2rem;
+        background: rgba(0,0,0,0.78);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        font-size: 0.9rem;
+        color: #ccc;
+      }
+      #info-panel.open { display: block; }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 0.6rem 2rem;
+        margin-top: 0.5rem;
+      }
+      .info-grid-item strong { color: #eee; margin-right: 0.4rem; }
+      #info-close {
+        float: right; margin-left: 1rem;
+        background: none; border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 6px; color: #aaa;
+        font-size: 0.8rem; cursor: pointer;
+        padding: 0.25rem 0.7rem; line-height: 1.4;
+      }
+      #info-close:hover { color: #eee; border-color: rgba(255,255,255,0.4); }
 
       /* transient toast for share-link copy */
       #toast {
@@ -212,12 +253,27 @@
 
       <div id="hud">
         <a class="back" href="../">&#8592; Index</a>
+        <button id="info-btn" onclick="toggleInfo()">&#9432; Info</button>
         <button id="ctrl-btn" onclick="toggleControls()">&#9881; Controls</button>
         <button id="shot-btn" onclick="exportScreenshot()">&#8595; PNG</button>
         <button id="share-btn" onclick="copyShareLink()">&#128279; Share</button>
-        <div>
+        <div id="hud-text" class="hidden">
           <div class="info-name">Rotating sphere v2</div>
-          <div class="info-desc">Hover any slider to reveal its auto-cycle speed. Drag the canvas to rotate.</div>
+          <div class="info-desc">Drag the canvas to rotate &middot; Controls to adjust &middot; PNG to export</div>
+        </div>
+        <div id="slider-hint"></div>
+      </div>
+
+      <div id="info-panel">
+        <button id="info-close" onclick="closeInfo()">&#10005; Minimise</button>
+        <strong style="color:#eee;">Rotating Sphere v2</strong>
+        <div class="info-grid">
+          <div class="info-grid-item"><strong>Drag canvas</strong>rotate the sphere</div>
+          <div class="info-grid-item"><strong>&#9881; Controls</strong>adjust axis, warp &amp; centre parameters</div>
+          <div class="info-grid-item"><strong>&#8595; PNG</strong>export a settings panel + image</div>
+          <div class="info-grid-item"><strong>&#128279; Share</strong>copy a link with all current settings</div>
+          <div class="info-grid-item"><strong>Speed sliders</strong>hover any slider to reveal auto-cycle speed</div>
+          <div class="info-grid-item"><strong>Trim handles</strong>drag the range handles to set cycle bounds</div>
         </div>
       </div>
 
@@ -403,6 +459,76 @@
         const open = document.getElementById('controls-panel').classList.toggle('open');
         document.getElementById('ctrl-btn').classList.toggle('active', open);
       }
+
+      function toggleInfo() {
+        const open = document.getElementById('info-panel').classList.toggle('open');
+        document.getElementById('info-btn').classList.toggle('active', open);
+        document.getElementById('hud-text').classList.toggle('hidden', !open);
+        if (open) localStorage.setItem('sphere-v2-info-seen', '1');
+      }
+
+      function closeInfo() {
+        document.getElementById('info-panel').classList.remove('open');
+        document.getElementById('info-btn').classList.remove('active');
+        document.getElementById('hud-text').classList.add('hidden');
+        localStorage.setItem('sphere-v2-info-seen', '1');
+      }
+
+      // Auto-open info panel on first visit.
+      window.addEventListener('load', () => {
+        if (!localStorage.getItem('sphere-v2-info-seen')) {
+          document.getElementById('info-panel').classList.add('open');
+          document.getElementById('info-btn').classList.add('active');
+          document.getElementById('hud-text').classList.remove('hidden');
+        }
+      });
+
+      // ── Slider hint descriptions ────────────────────────────────────────
+      const _sliderHints = {
+        'theta-slider':          'Polar (θ) — tilts the rotation axis toward or away from vertical',
+        'phi-slider':            'Azimuth (φ) — rotates the axis around the vertical',
+        'rot-offset-slider':     'Rotation about axis — manually spins the sphere around its axis',
+        'exp-slider':            'Exponent (a) — raises each surface coordinate to this power before colouring',
+        'expimag-slider':        'Imaginary (b) — adds a spiral twist via complex exponentiation',
+        'cx-slider':             'Centre X — shifts the X origin before the warp is applied',
+        'cy-slider':             'Centre Y — shifts the Y origin before the warp is applied',
+        'cz-slider':             'Centre Z — shifts the Z origin before the warp is applied',
+        'theta-slider-speed':    'Speed: auto-rotates polar angle (θ) continuously',
+        'phi-slider-speed':      'Speed: auto-rotates azimuth (φ) continuously',
+        'rot-offset-slider-speed':'Speed: continuously spins the sphere',
+        'exp-slider-speed':      'Speed: cycles exponent (a) within its trim range',
+        'expimag-slider-speed':  'Speed: cycles imaginary (b) within its trim range',
+        'cx-slider-speed':       'Speed: oscillates Centre X',
+        'cy-slider-speed':       'Speed: oscillates Centre Y',
+        'cz-slider-speed':       'Speed: oscillates Centre Z',
+      };
+
+      (function () {
+        const hint = document.getElementById('slider-hint');
+        function showHint(id) {
+          const text = _sliderHints[id];
+          if (!text) return;
+          hint.textContent = text;
+          hint.classList.add('visible');
+        }
+        function hideHint() { hint.classList.remove('visible'); }
+
+        document.getElementById('controls-panel').addEventListener('mouseover', e => {
+          const el = e.target.closest('input[type="range"]');
+          if (el) showHint(el.id);
+        });
+        document.getElementById('controls-panel').addEventListener('mouseout', e => {
+          if (!e.target.closest('input[type="range"]')) return;
+          const rel = e.relatedTarget ? e.relatedTarget.closest('input[type="range"]') : null;
+          if (!rel) hideHint();
+        });
+        document.getElementById('controls-panel').addEventListener('focusin', e => {
+          if (e.target.matches('input[type="range"]')) showHint(e.target.id);
+        });
+        document.getElementById('controls-panel').addEventListener('focusout', e => {
+          if (e.target.matches('input[type="range"]')) hideHint();
+        });
+      })();
 
       function pauseAll() {
         for (const id of Object.keys(_sliderSpeeds)) {
