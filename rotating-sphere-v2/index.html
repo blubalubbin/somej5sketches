@@ -31,6 +31,8 @@
          the slider keeps tracking the drag. */
       #controls-panel.dragging { opacity: 0.08; }
       #overlay.canvas-dragging { opacity: 0.08; }
+      #controls-panel.auto-playing { opacity: 0.08; transition: opacity 300ms ease; }
+      #controls-panel.auto-playing:hover { opacity: 1; }
 
       .ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
 
@@ -568,6 +570,7 @@
           if (speedSlider) speedSlider.value = 0;
           setSliderSpeed(id, 0);
         }
+        _syncPlayingState();
       }
 
       const _sliderDefaults = {
@@ -689,6 +692,11 @@
         }
       }
 
+      function _syncPlayingState() {
+        const anyPlaying = Object.values(_sliderSpeeds).some(s => s !== 0);
+        document.getElementById('controls-panel').classList.toggle('auto-playing', anyPlaying);
+      }
+
       function toggleSliderSpeed(targetId) {
         const current = _sliderSpeeds[targetId] || 0;
         const newSpeed = current !== 0 ? 0
@@ -696,6 +704,7 @@
         const speedSlider = document.getElementById(targetId + '-speed');
         if (speedSlider) speedSlider.value = newSpeed;
         setSliderSpeed(targetId, newSpeed);
+        _syncPlayingState();
       }
 
       function setSliderSpeed(targetId, speedVal) {
