@@ -193,11 +193,11 @@
       }
       #overlay:has(#controls-panel.dragging) #hud { opacity: 0.08; }
       #hud.dragging { opacity: 0.08; transition: opacity 140ms ease; }
-      #overlay:has(#controls-panel.auto-playing) #hud { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
-      #overlay:has(#controls-panel.auto-playing.revealed) #hud { opacity: 1; transition: opacity 0.15s ease; }
-      #overlay:has(#controls-panel.auto-playing.revealed) #hud.dragging { opacity: 0.08; transition: opacity 140ms ease; }
+      #overlay:has(#controls-panel.auto-playing.open) #hud { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
+      #overlay:has(#controls-panel.auto-playing.open.revealed) #hud { opacity: 1; transition: opacity 0.15s ease; }
+      #overlay:has(#controls-panel.auto-playing.open.revealed) #hud.dragging { opacity: 0.08; transition: opacity 140ms ease; }
       @media (hover: hover) {
-        #overlay:has(#controls-panel.auto-playing) #hud:hover { opacity: 1; transition: opacity 0.15s ease; }
+        #overlay:has(#controls-panel.auto-playing.open) #hud:hover { opacity: 1; transition: opacity 0.15s ease; }
       }
       #hud a.back {
         display: flex; align-items: center; gap: 0.35rem;
@@ -463,7 +463,7 @@
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <input id="cx-slider-speed" type="range" min="-0.05" max="0.05" step="0.001" value="0"
+            <input id="cx-slider-speed" type="range" min="0" max="0.05" step="0.001" value="0"
               oninput="setSliderSpeed('cx-slider', this.value)">
             <span class="speed-value" id="cx-slider-speed-val">0.000</span>
           </div>
@@ -481,7 +481,7 @@
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <input id="cy-slider-speed" type="range" min="-0.05" max="0.05" step="0.001" value="0"
+            <input id="cy-slider-speed" type="range" min="0" max="0.05" step="0.001" value="0"
               oninput="setSliderSpeed('cy-slider', this.value)">
             <span class="speed-value" id="cy-slider-speed-val">0.000</span>
           </div>
@@ -499,7 +499,7 @@
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <input id="cz-slider-speed" type="range" min="-0.05" max="0.05" step="0.001" value="0"
+            <input id="cz-slider-speed" type="range" min="0" max="0.05" step="0.001" value="0"
               oninput="setSliderSpeed('cz-slider', this.value)">
             <span class="speed-value" id="cz-slider-speed-val">0.000</span>
           </div>
