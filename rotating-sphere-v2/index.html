@@ -567,8 +567,8 @@
       // Per-slider oscillation bounds (lo/hi within the slider's full range).
       // Only exp-slider and expimag-slider have trim UI; others fall back to slider min/max.
       const _oscBounds = {
-        'exp-slider':     { lo: 0.1,  hi: 5.0  },
-        'expimag-slider': { lo: 0,    hi: 10   },
+        'exp-slider':     { lo: 0.05, hi: 20   },
+        'expimag-slider': { lo: 0,    hi: 50   },
       };
 
       function _getOscBounds(id) {
@@ -737,8 +737,8 @@
           const ratio = deltaX / rect.width;
           let v = _startValue + ratio * span;
           if (step > 0) v = min + Math.round((v - min) / step) * step;
-          if (slider.id === 'rot-offset-slider') {
-            // Rotation about axis wraps on manual drag.
+          if (_WRAP_IDS.has(slider.id)) {
+            // Rotation, polar and azimuth sliders wrap on manual drag.
             v = min + ((v - min) % span + span) % span;
           } else {
             // All other sliders clamp at boundaries on manual drag.
