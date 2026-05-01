@@ -49,6 +49,7 @@
       /* ── HUD minimised state ── */
       #hud.minimised .hud-label { display: none; }
       #hud.minimised #hud-text  { display: none; }
+      #hud.minimised { flex-wrap: nowrap; }
       #hud-text { margin-left: auto; }
 
       .ctrl-row {
@@ -181,7 +182,9 @@
         background: rgba(0,0,0,0.55);
         backdrop-filter: blur(6px);
         border-bottom: 1px solid rgba(255,255,255,0.07);
+        transition: opacity 140ms ease;
       }
+      #overlay:has(#controls-panel.dragging) #hud { opacity: 0.08; }
       #hud a.back {
         display: flex; align-items: center; gap: 0.35rem;
         padding: 0.6rem 1.25rem;
