@@ -31,8 +31,9 @@
          the slider keeps tracking the drag. */
       #controls-panel.dragging { opacity: 0.08; }
       #overlay.canvas-dragging { opacity: 0.08; }
-      #controls-panel.auto-playing { opacity: 0.08; transition: opacity 0.5s ease 2s; }
+      #controls-panel.auto-playing { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
       #controls-panel.auto-playing.revealed { opacity: 1; transition: opacity 0.15s ease; }
+      #controls-panel.auto-playing.dragging { opacity: 0.08; transition: opacity 140ms ease; }
       @media (hover: hover) {
         #controls-panel.auto-playing:hover { opacity: 1; transition: opacity 0.15s ease; }
       }
@@ -61,7 +62,7 @@
         display: flex; align-items: center;
         gap: 0.9rem; margin-bottom: 0.65rem;
       }
-      .ctrl-label  { min-width: 100px; color: #bbb; font-size: 0.9rem; }
+      .ctrl-label  { min-width: 100px; color: #bbb; font-size: 0.9rem; cursor: ew-resize; user-select: none; }
       input[type="range"] {
         flex: 1; accent-color: #58a6ff;
         height: 2rem; cursor: pointer;
@@ -305,6 +306,24 @@
           <div style="flex:1"></div>
           <button class="speed-play-btn" id="pause-all-btn" onclick="toggleAllPlay()">&#9654; Play all</button>
         </div>
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('rot-offset-slider')">&#8634;</button>
+            <span class="ctrl-label">Rotation</span>
+            <input id="rot-offset-slider" type="range" min="0" max="360" step="1" value="0"
+              oninput="setRotOffset(+this.value * Math.PI / 180);
+                       document.getElementById('rot-offset-val').textContent=(+this.value).toFixed(0)+'°'">
+            <span class="ctrl-value" id="rot-offset-val">0°</span>
+            <button class="speed-play-btn" id="rot-offset-slider-play-btn" onclick="toggleSliderSpeed('rot-offset-slider')">▶</button>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="rot-offset-slider-speed" type="range" min="-10" max="10" step="0.1" value="0"
+              oninput="setSliderSpeed('rot-offset-slider', this.value)">
+            <span class="speed-value" id="rot-offset-slider-speed-val">0.0</span>
+          </div>
+        </div>
+
         <div class="ctrl-heading">Rotation axis</div>
 
         <div class="slider-group">
@@ -340,24 +359,6 @@
             <input id="phi-slider-speed" type="range" min="-3" max="3" step="0.05" value="0"
               oninput="setSliderSpeed('phi-slider', this.value)">
             <span class="speed-value" id="phi-slider-speed-val">0.00</span>
-          </div>
-        </div>
-
-        <div class="slider-group">
-          <div class="ctrl-row">
-            <button class="reset-btn" onclick="resetSlider('rot-offset-slider')">&#8634;</button>
-            <span class="ctrl-label">Rotation about axis</span>
-            <input id="rot-offset-slider" type="range" min="-3.1416" max="3.1416" step="0.01" value="0"
-              oninput="setRotOffset(this.value);
-                       document.getElementById('rot-offset-val').textContent=(+this.value*180/Math.PI).toFixed(1)+'°'">
-            <span class="ctrl-value" id="rot-offset-val">0.0°</span>
-            <button class="speed-play-btn" id="rot-offset-slider-play-btn" onclick="toggleSliderSpeed('rot-offset-slider')">▶</button>
-          </div>
-          <div class="speed-row">
-            <span class="speed-label">↻ speed</span>
-            <input id="rot-offset-slider-speed" type="range" min="-0.2" max="0.2" step="0.005" value="0"
-              oninput="setSliderSpeed('rot-offset-slider', this.value)">
-            <span class="speed-value" id="rot-offset-slider-speed-val">0.000</span>
           </div>
         </div>
 
@@ -524,7 +525,7 @@
       const _sliderHints = {
         'theta-slider':          'Polar (θ) — tilts the rotation axis; visible only when rotation is non-zero',
         'phi-slider':            'Azimuth (φ) — sweeps the axis around the vertical; visible only when rotation is non-zero',
-        'rot-offset-slider':     'Rotation about axis — manually spins the sphere around its axis',
+        'rot-offset-slider':     'Rotation — manually spins the sphere around its axis',
         'exp-slider':            'Exponent (a) — raises each surface coordinate to this power before colouring',
         'expimag-slider':        'Imaginary (b) — adds a spiral twist via complex exponentiation',
         'cx-slider':             'Centre X — shifts the X origin before the warp is applied',
@@ -657,7 +658,7 @@
       const _sliderDefaultSpeeds = {
         'theta-slider':      0.5,
         'phi-slider':        0.75,
-        'rot-offset-slider': 0.05,
+        'rot-offset-slider': 3,
         'exp-slider':        0.1,
         'expimag-slider':    0.5,
         'cx-slider':         0.012,
@@ -726,14 +727,20 @@
       }
 
       // Tap/click anywhere in the overlay to reveal the panel + HUD for 3s (needed on iOS where hover doesn't exist).
+      // When the panel is dimmed (auto-playing, not yet revealed), absorb the tap so it doesn't
+      // accidentally interact with sliders or buttons — first tap just reveals.
       document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('overlay').addEventListener('pointerdown', () => {
+        document.getElementById('overlay').addEventListener('pointerdown', e => {
           const panel = document.getElementById('controls-panel');
           if (!panel.classList.contains('auto-playing')) return;
-          panel.classList.add('revealed');
           clearTimeout(_revealTimer);
+          if (!panel.classList.contains('revealed')) {
+            e.stopPropagation();
+            e.preventDefault();
+          }
+          panel.classList.add('revealed');
           _revealTimer = setTimeout(() => panel.classList.remove('revealed'), 3000);
-        }, { passive: true });
+        }, { passive: false, capture: true });
       });
 
       function toggleSliderSpeed(targetId) {
@@ -910,20 +917,26 @@
 
         document.addEventListener('pointerdown', e => {
           const t = e.target;
-          if (!(t instanceof HTMLInputElement) || t.type !== 'range') return;
-          if (!t.closest('#controls-panel')) return;
-          _slider = t;
+          let slider;
+          if (t instanceof HTMLInputElement && t.type === 'range') {
+            slider = t;
+          } else if (t.closest('.ctrl-label')) {
+            const row = t.closest('.ctrl-row');
+            slider = row && row.querySelector('input[type="range"]');
+          }
+          if (!slider || !slider.closest('#controls-panel')) return;
+          _slider = slider;
           _pointerId = e.pointerId;
-          _startValue = parseFloat(t.value) || 0;
+          _startValue = parseFloat(slider.value) || 0;
           _startClientX = e.clientX;
           _prevClientX = e.clientX;
-          _draggingSliderId = t.id;
+          _draggingSliderId = slider.id;
           panel().classList.add('dragging');
-          if (t.closest('.speed-row')) {
-            const group = t.closest('.slider-group');
+          if (slider.closest('.speed-row')) {
+            const group = slider.closest('.slider-group');
             if (group) group.classList.add('dragging-speed');
           }
-          try { t.setPointerCapture(e.pointerId); } catch (_) {}
+          try { slider.setPointerCapture(e.pointerId); } catch (_) {}
           // Intentionally NO setFromDelta here — value should not jump on click.
           e.preventDefault();
         });
@@ -948,10 +961,35 @@
         );
       })();
 
+      // ── Play/reset button drag guard ────────────────────────────────────
+      // Prevents accidental button triggers when the pointer moves >8px after
+      // landing on a button (e.g. dragging near a play button).
+      (function () {
+        let _ptrId = null, _startX, _startY, _moved = false;
+        document.addEventListener('pointerdown', e => {
+          if (!e.target.closest('.speed-play-btn, .reset-btn')) return;
+          if (!e.target.closest('#controls-panel')) return;
+          _ptrId = e.pointerId; _startX = e.clientX; _startY = e.clientY; _moved = false;
+        });
+        document.addEventListener('pointermove', e => {
+          if (e.pointerId !== _ptrId) return;
+          const dx = e.clientX - _startX, dy = e.clientY - _startY;
+          if (dx * dx + dy * dy > 64) _moved = true;
+        });
+        ['pointerup', 'pointercancel'].forEach(ev =>
+          document.addEventListener(ev, e => { if (e.pointerId === _ptrId) _ptrId = null; })
+        );
+        document.getElementById('controls-panel').addEventListener('click', e => {
+          if (_moved && e.target.closest('.speed-play-btn, .reset-btn')) {
+            e.stopImmediatePropagation(); e.preventDefault(); _moved = false;
+          }
+        }, true);
+      })();
+
       // ── Canvas drag → rotation offset slider ────────────────────────────
       // Dragging anywhere on the canvas (i.e. outside the overlay) shifts the
       // rotOffset slider. Horizontal motion across the full window width maps
-      // to 8π of rotation, matching the previous mouseX-based behaviour.
+      // to 8 full rotations (2880°).
       (function () {
         let _active = false;
         let _startX = 0;
@@ -966,7 +1004,7 @@
           if (e.target instanceof HTMLInputElement) return;
           _active = true;
           _startX = e.clientX;
-          _startOffset = (typeof rotOffset !== 'undefined') ? rotOffset : 0;
+          _startOffset = (typeof rotOffset !== 'undefined') ? rotOffset * 180 / Math.PI : 0;
           _pid = e.pointerId;
           document.getElementById('overlay').classList.add('canvas-dragging');
         });
@@ -974,7 +1012,7 @@
         document.addEventListener('pointermove', e => {
           if (!_active || e.pointerId !== _pid) return;
           const w = window.innerWidth || 1;
-          const newOffset = _startOffset + (e.clientX - _startX) / w * 8 * Math.PI;
+          const newOffset = _startOffset + (e.clientX - _startX) / w * 8 * 360;
           // Wrap to slider range so the slider value stays in sync.
           const slider = document.getElementById('rot-offset-slider');
           if (slider) {
@@ -1138,9 +1176,51 @@
 
       // ── Share link ──────────────────────────────────────────────────────
 
+      function _encodeSpeedParams() {
+        const keys = {
+          'theta-slider':'sp_t','phi-slider':'sp_p','rot-offset-slider':'sp_r',
+          'exp-slider':'sp_a','expimag-slider':'sp_b',
+          'cx-slider':'sp_cx','cy-slider':'sp_cy','cz-slider':'sp_cz'
+        };
+        return Object.entries(keys)
+          .filter(([id]) => _sliderSpeeds[id])
+          .map(([id, k]) => `${k}=${_sliderSpeeds[id]}`)
+          .join('&');
+      }
+
+      function _applySpeedsFromHash() {
+        const keys = {
+          'sp_t':'theta-slider','sp_p':'phi-slider','sp_r':'rot-offset-slider',
+          'sp_a':'exp-slider','sp_b':'expimag-slider',
+          'sp_cx':'cx-slider','sp_cy':'cy-slider','sp_cz':'cz-slider'
+        };
+        const hash = location.hash.startsWith('#') ? location.hash.slice(1) : location.hash;
+        const params = {};
+        for (const kv of hash.split('&')) {
+          const i = kv.indexOf('='); if (i < 0) continue;
+          params[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1));
+        }
+        let anySet = false;
+        for (const [k, id] of Object.entries(keys)) {
+          if (!(k in params)) continue;
+          const speed = parseFloat(params[k]);
+          if (!Number.isFinite(speed) || speed === 0) continue;
+          const sl = document.getElementById(id + '-speed');
+          if (sl) sl.value = speed;
+          setSliderSpeed(id, speed);
+          anySet = true;
+        }
+        if (anySet) _syncPlayingState();
+      }
+
+      function _buildHash() {
+        const hash = encodeSettings();
+        const speeds = _encodeSpeedParams();
+        return speeds ? hash + '&' + speeds : hash;
+      }
+
       function _shareUrl() {
-        const base = location.origin + location.pathname;
-        return base + '#' + encodeSettings();
+        return location.origin + location.pathname + '#' + _buildHash();
       }
 
       function copyShareLink() {
@@ -1148,7 +1228,7 @@
         let url;
         try {
           url = _shareUrl();
-          try { history.replaceState(null, '', '#' + encodeSettings()); } catch (_) {}
+          try { history.replaceState(null, '', '#' + _buildHash()); } catch (_) {}
         } catch (err) {
           console.error('[share] build url error', err);
           showToast('Share failed: ' + err.message);
@@ -1204,8 +1284,8 @@
         setLabel ('theta-val',    tDeg.toFixed(1) + '°');
         setSlider('phi-slider',   pDeg.toFixed(1));
         setLabel ('phi-val',      pDeg.toFixed(1) + '°');
-        setSlider('rot-offset-slider', rotOffset);
-        setLabel ('rot-offset-val',    (rotOffset * 180 / Math.PI).toFixed(1) + '°');
+        setSlider('rot-offset-slider', (rotOffset * 180 / Math.PI).toFixed(0));
+        setLabel ('rot-offset-val',    (rotOffset * 180 / Math.PI).toFixed(0) + '°');
         setSlider('exp-slider',   coordExp);
         setLabel ('exp-val',      coordExp.toFixed(2));
         setSlider('expimag-slider', coordExpImag);
@@ -1226,6 +1306,7 @@
 
       window.addEventListener('load', () => {
         setTimeout(_syncControlsFromState, 0);
+        setTimeout(_applySpeedsFromHash, 50);
         setTimeout(() => { _updateTrimUI('exp-slider'); _updateTrimUI('expimag-slider'); }, 0);
       });
     </script>
