@@ -31,8 +31,8 @@
          the slider keeps tracking the drag. */
       #controls-panel.dragging { opacity: 0.08; }
       #overlay.canvas-dragging { opacity: 0.08; }
-      #controls-panel.auto-playing { opacity: 0.08; transition: opacity 300ms ease; }
-      #controls-panel.auto-playing:hover { opacity: 1; }
+      #controls-panel.auto-playing { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
+      #controls-panel.auto-playing:hover { opacity: 1; transition: opacity 0.15s ease; }
 
       .ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
 
@@ -825,16 +825,21 @@
         let _pointerId = null;
         let _startValue = 0;
         let _startClientX = 0;
+        let _prevClientX = 0;
 
-        function setFromDelta(slider, deltaX) {
+        function setFromDelta(slider, deltaX, incremental) {
           const rect = slider.getBoundingClientRect();
           if (rect.width <= 0) return;
           const min  = parseFloat(slider.min);
           const max  = parseFloat(slider.max);
           const step = parseFloat(slider.step) || 0;
           const span = max - min;
-          const ratio = deltaX / rect.width;
-          let v = _startValue + ratio * span;
+          let v;
+          if (incremental) {
+            v = (parseFloat(slider.value) || 0) + (deltaX / rect.width) * span;
+          } else {
+            v = _startValue + (deltaX / rect.width) * span;
+          }
           if (step > 0) v = min + Math.round((v - min) / step) * step;
           if (_WRAP_IDS.has(slider.id)) {
             // Rotation, polar and azimuth sliders wrap on manual drag.
@@ -872,6 +877,7 @@
           _pointerId = e.pointerId;
           _startValue = parseFloat(t.value) || 0;
           _startClientX = e.clientX;
+          _prevClientX = e.clientX;
           _draggingSliderId = t.id;
           panel().classList.add('dragging');
           if (t.closest('.speed-row')) {
@@ -885,7 +891,13 @@
 
         document.addEventListener('pointermove', e => {
           if (_slider && e.pointerId === _pointerId) {
-            setFromDelta(_slider, e.clientX - _startClientX);
+            if (_WRAP_IDS.has(_slider.id)) {
+              const incrDelta = e.clientX - _prevClientX;
+              _prevClientX = e.clientX;
+              setFromDelta(_slider, incrDelta, true);
+            } else {
+              setFromDelta(_slider, e.clientX - _startClientX, false);
+            }
             e.preventDefault();
           }
         });
