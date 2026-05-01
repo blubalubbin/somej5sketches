@@ -72,19 +72,22 @@
 
       /* speed sub-row: visible only while speed != 0 (▶ button starts it) */
       .speed-row {
-        display: none;
+        display: flex;
         align-items: center;
         gap: 0.9rem;
         padding: 0.1rem 0 0.2rem;
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        transition: max-height 0.2s ease, opacity 0.2s ease;
       }
-      .slider-group.has-speed .speed-row { display: flex; }
-      /* While hovering the panel, collapse has-speed rows not currently hovered */
-      #controls-panel:hover .slider-group.has-speed .speed-row { display: none; }
+      /* Show when speed active + slider just used (highlighted) or actively hovered */
+      .slider-group.has-speed.highlighted .speed-row { max-height: 2.5rem; opacity: 1; }
       #controls-panel:hover .slider-group.has-speed:hover .speed-row,
-      #controls-panel:hover .slider-group.has-speed:focus-within .speed-row { display: flex; }
+      #controls-panel:hover .slider-group.has-speed:focus-within .speed-row { max-height: 2.5rem; opacity: 1; }
       /* Also hide during pointer-drag, but not if the speed row is the one being dragged */
-      #controls-panel.dragging .speed-row { display: none !important; }
-      #controls-panel.dragging .slider-group.dragging-speed .speed-row { display: flex !important; }
+      #controls-panel.dragging .speed-row { max-height: 0 !important; opacity: 0 !important; }
+      #controls-panel.dragging .slider-group.dragging-speed .speed-row { max-height: 2.5rem !important; opacity: 1 !important; }
       .speed-label {
         min-width: 100px;
         color: #888; font-size: 0.75rem;
@@ -117,17 +120,20 @@
 
       /* ── Trim row: cycle-range handles for oscillating sliders ── */
       .trim-row {
-        display: none;
+        display: flex;
         align-items: center;
         gap: 0.9rem;
         padding: 0.1rem 0 0.2rem;
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        transition: max-height 0.2s ease, opacity 0.2s ease;
       }
-      .slider-group:hover .trim-row,
-      .slider-group:focus-within .trim-row { display: flex; }
-      #controls-panel:hover .slider-group.has-speed .trim-row { display: none; }
-      #controls-panel:hover .slider-group:hover .trim-row,
-      #controls-panel:hover .slider-group:focus-within .trim-row { display: flex; }
-      #controls-panel.dragging .trim-row { display: none !important; }
+      /* Show only when speed active + highlighted or hovered (mirrors speed-row behaviour) */
+      .slider-group.has-speed.highlighted .trim-row { max-height: 2.5rem; opacity: 1; }
+      #controls-panel:hover .slider-group.has-speed:hover .trim-row,
+      #controls-panel:hover .slider-group.has-speed:focus-within .trim-row { max-height: 2.5rem; opacity: 1; }
+      #controls-panel.dragging .trim-row { max-height: 0 !important; opacity: 0 !important; }
       .trim-label {
         min-width: 100px;
         color: #888; font-size: 0.75rem;
