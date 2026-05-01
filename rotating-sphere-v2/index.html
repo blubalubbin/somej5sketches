@@ -95,6 +95,12 @@
       }
       .speed-play-btn:hover { color: #e0a050; border-color: #e0a050; }
       .slider-group.has-speed .speed-play-btn { color: #e0a050; border-color: #e0a050; }
+      .reset-btn {
+        background: none; border: 1px solid #333; border-radius: 3px;
+        cursor: pointer; color: #444; font-size: 0.75rem;
+        padding: 0.2rem 0.45rem; line-height: 1; flex-shrink: 0;
+      }
+      .reset-btn:hover { color: #aaa; border-color: #777; }
 
       /* ── Trim row: cycle-range handles for oscillating sliders ── */
       .trim-row {
@@ -262,15 +268,17 @@
 
       <div id="controls-panel">
         <div class="ctrl-row" style="margin-bottom:0.75rem;">
-          <span class="ctrl-label" style="color:#555;font-size:0.85rem;">All speeds</span>
+          <span class="ctrl-label" style="color:#555;font-size:0.85rem;">All</span>
           <div style="flex:1"></div>
           <span class="ctrl-value"></span>
+          <button class="speed-play-btn" onclick="resetAll()">&#8634; Reset all</button>
           <button class="speed-play-btn" id="pause-all-btn" onclick="pauseAll()">&#9646;&#9646; Pause all</button>
         </div>
         <div class="ctrl-heading">Rotation axis</div>
 
         <div class="slider-group">
           <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('theta-slider')">&#8634;</button>
             <span class="ctrl-label">Polar (&#952;)</span>
             <input id="theta-slider" type="range" min="-180" max="180" step="0.1" value="54.7"
               oninput="setAxisTheta(this.value);
@@ -288,6 +296,7 @@
 
         <div class="slider-group">
           <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('phi-slider')">&#8634;</button>
             <span class="ctrl-label">Azimuth (&#966;)</span>
             <input id="phi-slider" type="range" min="0" max="360" step="0.1" value="45.0"
               oninput="setAxisPhi(this.value);
@@ -305,6 +314,7 @@
 
         <div class="slider-group">
           <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('rot-offset-slider')">&#8634;</button>
             <span class="ctrl-label">Rotation about axis</span>
             <input id="rot-offset-slider" type="range" min="0" max="6.2832" step="0.01" value="0"
               oninput="setRotOffset(this.value);
@@ -324,6 +334,7 @@
 
         <div class="slider-group">
           <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('exp-slider')">&#8634;</button>
             <span class="ctrl-label">Exponent (a)</span>
             <input id="exp-slider" type="range" min="0.05" max="20" step="0.05" value="1"
               oninput="setCoordExp(this.value);
@@ -352,6 +363,7 @@
 
         <div class="slider-group">
           <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('expimag-slider')">&#8634;</button>
             <span class="ctrl-label">Imaginary (b)</span>
             <input id="expimag-slider" type="range" min="0" max="50" step="0.1" value="0"
               oninput="setCoordExpImag(this.value);
@@ -382,6 +394,7 @@
 
         <div class="slider-group">
           <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('cx-slider')">&#8634;</button>
             <span class="ctrl-label" style="color:#f87;">Centre X</span>
             <input id="cx-slider" type="range" min="-1" max="1" step="0.01" value="0"
               oninput="setCoordCenterX(this.value);
@@ -399,6 +412,7 @@
 
         <div class="slider-group">
           <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('cy-slider')">&#8634;</button>
             <span class="ctrl-label" style="color:#8d8;">Centre Y</span>
             <input id="cy-slider" type="range" min="-1" max="1" step="0.01" value="0"
               oninput="setCoordCenterY(this.value);
@@ -416,6 +430,7 @@
 
         <div class="slider-group">
           <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('cz-slider')">&#8634;</button>
             <span class="ctrl-label" style="color:#7cf;">Centre Z</span>
             <input id="cz-slider" type="range" min="-1" max="1" step="0.01" value="0"
               oninput="setCoordCenterZ(this.value);
@@ -532,6 +547,33 @@
           if (speedSlider) speedSlider.value = 0;
           setSliderSpeed(id, 0);
         }
+      }
+
+      const _sliderDefaults = {
+        'theta-slider':      54.7,
+        'phi-slider':        45.0,
+        'rot-offset-slider': 0,
+        'exp-slider':        1,
+        'expimag-slider':    0,
+        'cx-slider':         0,
+        'cy-slider':         0,
+        'cz-slider':         0,
+      };
+
+      function resetSlider(targetId) {
+        const def = _sliderDefaults[targetId];
+        if (def === undefined) return;
+        const slider = document.getElementById(targetId);
+        if (!slider) return;
+        slider.value = def;
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+        const speedSlider = document.getElementById(targetId + '-speed');
+        if (speedSlider) speedSlider.value = 0;
+        setSliderSpeed(targetId, 0);
+      }
+
+      function resetAll() {
+        for (const id of Object.keys(_sliderDefaults)) resetSlider(id);
       }
 
       // ── Slider auto-cycling ─────────────────────────────────────────────
