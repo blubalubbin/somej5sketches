@@ -11,7 +11,7 @@
         position: fixed;
         top: 0; left: 0; right: 0;
         z-index: 10;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-family: "Comic Sans MS", "Comic Sans", cursive;
         color: #eee;
         font-size: 1rem;
       }
@@ -36,6 +36,9 @@
       /* slider drag: fade panel (pointer events still tracked) */
       #controls-panel.dragging { opacity: 0.08; }
       #overlay.canvas-dragging { opacity: 0.08; }
+      /* auto-playing: fade panel when any slider is running */
+      #controls-panel.auto-playing { opacity: 0.08; transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms ease; }
+      #controls-panel.auto-playing:hover { opacity: 1; }
 
       /* top drag handle — the strip that peeks above the fold */
       #ctrl-top-handle {
@@ -279,7 +282,7 @@
         border: 1px solid rgba(120,200,150,0.45);
         border-radius: 8px;
         color: #cfead8;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: "Comic Sans MS", "Comic Sans", cursive;
         font-size: 0.9rem;
         z-index: 30;
         opacity: 0;
@@ -602,6 +605,7 @@
           if (speedSlider) speedSlider.value = 0;
           setSliderSpeed(id, 0);
         }
+        _syncPlayingState();
       }
 
       const _sliderDefaults = {
@@ -723,6 +727,11 @@
         }
       }
 
+      function _syncPlayingState() {
+        const anyPlaying = Object.values(_sliderSpeeds).some(s => s !== 0);
+        document.getElementById('controls-panel').classList.toggle('auto-playing', anyPlaying);
+      }
+
       function toggleSliderSpeed(targetId) {
         const current = _sliderSpeeds[targetId] || 0;
         const newSpeed = current !== 0 ? 0
@@ -730,7 +739,7 @@
         const speedSlider = document.getElementById(targetId + '-speed');
         if (speedSlider) speedSlider.value = newSpeed;
         setSliderSpeed(targetId, newSpeed);
-        if (newSpeed !== 0) peekControls();
+        _syncPlayingState();
       }
 
       function setSliderSpeed(targetId, speedVal) {
