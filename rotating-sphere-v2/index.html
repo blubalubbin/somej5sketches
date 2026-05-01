@@ -11,61 +11,26 @@
         position: fixed;
         top: 0; left: 0; right: 0;
         z-index: 10;
-        font-family: "Comic Sans MS", "Comic Sans", cursive;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
         color: #eee;
         font-size: 1rem;
       }
 
-      /* ── controls panel — bottom sheet ── */
+      /* ── controls panel ── */
       #controls-panel {
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        z-index: 10;
-        display: flex;
-        flex-direction: column;
-        max-height: 75vh;
-        background: rgba(0,0,0,0.88);
-        backdrop-filter: blur(10px);
-        border-radius: 14px 14px 0 0;
-        border: 1px solid rgba(255,255,255,0.12);
-        border-bottom: none;
-        transform: translateY(calc(100% - 44px));
-        transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 140ms ease;
+        display: none;
+        padding: 1rem 1.25rem;
+        background: rgba(0,0,0,0.82);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        transition: opacity 140ms ease;
       }
-      #controls-panel.open { transform: translateY(0); }
-      /* slider drag: fade panel (pointer events still tracked) */
+      #controls-panel.open { display: block; }
+      /* While a slider is being dragged, fade the panel so the sphere
+         underneath is visible. Opacity does not block pointer events, so
+         the slider keeps tracking the drag. */
       #controls-panel.dragging { opacity: 0.08; }
       #overlay.canvas-dragging { opacity: 0.08; }
-      /* auto-playing: fade panel when any slider is running */
-      #controls-panel.auto-playing { opacity: 0.08; transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms ease; }
-      #controls-panel.auto-playing:hover { opacity: 1; }
-
-      /* top drag handle — the strip that peeks above the fold */
-      #ctrl-top-handle {
-        display: flex; align-items: center; justify-content: center;
-        height: 44px; flex-shrink: 0;
-        cursor: pointer;
-        border-radius: 14px 14px 0 0;
-      }
-      #ctrl-top-handle:hover .drag-pill { background: rgba(255,255,255,0.5); }
-      #ctrl-content {
-        flex: 1; overflow-y: auto;
-        padding: 0 1.25rem 0.5rem;
-        overscroll-behavior: contain;
-      }
-      #ctrl-bottom-strip {
-        display: flex; align-items: center; justify-content: center;
-        height: 44px; flex-shrink: 0;
-        cursor: pointer;
-        border-top: 1px solid rgba(255,255,255,0.08);
-      }
-      #ctrl-bottom-strip:hover .drag-pill { background: rgba(255,255,255,0.5); }
-      .drag-pill {
-        width: 36px; height: 4px;
-        background: rgba(255,255,255,0.25);
-        border-radius: 2px;
-        transition: background 150ms ease;
-      }
 
       .ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
 
@@ -219,7 +184,7 @@
         border-bottom: 1px solid rgba(255,255,255,0.07);
         transition: opacity 140ms ease;
       }
-      body:has(#controls-panel.dragging) #hud { opacity: 0.08; }
+      #overlay:has(#controls-panel.dragging) #hud { opacity: 0.08; }
       #hud a.back {
         display: flex; align-items: center; gap: 0.35rem;
         padding: 0.6rem 1.25rem;
@@ -282,7 +247,7 @@
         border: 1px solid rgba(120,200,150,0.45);
         border-radius: 8px;
         color: #cfead8;
-        font-family: "Comic Sans MS", "Comic Sans", cursive;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         font-size: 0.9rem;
         z-index: 30;
         opacity: 0;
@@ -303,6 +268,7 @@
         <button id="shot-btn" onclick="exportScreenshot()">&#8595; <span class="hud-label">PNG</span></button>
         <button id="share-btn" onclick="copyShareLink()">&#128279; <span class="hud-label">Share</span></button>
         <button id="info-btn" onclick="toggleInfo()">&#9432; <span class="hud-label">Info</span></button>
+        <button id="ctrl-btn" onclick="toggleControls()">&#9881; <span class="hud-label">Controls</span></button>
         <button id="minimise-btn" onclick="toggleHudMinimise()" title="Minimise HUD">&#8863;</button>
         <div id="hud-text">
           <div class="info-name">Rotating sphere v2</div>
@@ -323,11 +289,7 @@
         </div>
       </div>
 
-    </div>
-
-    <div id="controls-panel">
-      <div id="ctrl-top-handle"><div class="drag-pill"></div></div>
-      <div id="ctrl-content">
+      <div id="controls-panel">
         <div class="ctrl-row" style="margin-bottom:0.75rem;">
           <button class="speed-play-btn" onclick="resetAll()">&#8634; Reset all</button>
           <div style="flex:1"></div>
@@ -507,28 +469,29 @@
 
         <div class="axis-readout">axis: (<span id="axis-display">0.577, 0.577, 0.577</span>)</div>
       </div>
-      <div id="ctrl-bottom-strip"><div class="drag-pill"></div></div>
-    </div>
 
+    </div>
     <div id="toast" role="status" aria-live="polite"></div>
 
     <script>
-      function openControls() {
-        document.getElementById('controls-panel').classList.add('open');
-        document.getElementById('info-panel').classList.remove('open');
-        document.getElementById('info-btn').classList.remove('active');
-        localStorage.setItem('sphere-v2-info-seen', '1');
-      }
-
-      function peekControls() {
-        document.getElementById('controls-panel').classList.remove('open');
+      function toggleControls() {
+        const open = document.getElementById('controls-panel').classList.toggle('open');
+        document.getElementById('ctrl-btn').classList.toggle('active', open);
+        // Mutual exclusion: close info panel when opening controls.
+        if (open) {
+          document.getElementById('info-panel').classList.remove('open');
+          document.getElementById('info-btn').classList.remove('active');
+          localStorage.setItem('sphere-v2-info-seen', '1');
+        }
       }
 
       function toggleInfo() {
         const open = document.getElementById('info-panel').classList.toggle('open');
         document.getElementById('info-btn').classList.toggle('active', open);
+        // Mutual exclusion: close controls panel when opening info.
         if (open) {
-          peekControls();
+          document.getElementById('controls-panel').classList.remove('open');
+          document.getElementById('ctrl-btn').classList.remove('active');
           localStorage.setItem('sphere-v2-info-seen', '1');
         }
       }
@@ -605,7 +568,6 @@
           if (speedSlider) speedSlider.value = 0;
           setSliderSpeed(id, 0);
         }
-        _syncPlayingState();
       }
 
       const _sliderDefaults = {
@@ -727,11 +689,6 @@
         }
       }
 
-      function _syncPlayingState() {
-        const anyPlaying = Object.values(_sliderSpeeds).some(s => s !== 0);
-        document.getElementById('controls-panel').classList.toggle('auto-playing', anyPlaying);
-      }
-
       function toggleSliderSpeed(targetId) {
         const current = _sliderSpeeds[targetId] || 0;
         const newSpeed = current !== 0 ? 0
@@ -739,7 +696,6 @@
         const speedSlider = document.getElementById(targetId + '-speed');
         if (speedSlider) speedSlider.value = newSpeed;
         setSliderSpeed(targetId, newSpeed);
-        _syncPlayingState();
       }
 
       function setSliderSpeed(targetId, speedVal) {
@@ -943,7 +899,7 @@
         let _pid = null;
 
         const isInOverlay = el =>
-          el && el.closest && (el.closest('#overlay') || el.closest('#controls-panel'));
+          el && (el.closest && el.closest('#overlay'));
 
         document.addEventListener('pointerdown', e => {
           if (isInOverlay(e.target)) return;
@@ -1211,8 +1167,6 @@
       window.addEventListener('load', () => {
         setTimeout(_syncControlsFromState, 0);
         setTimeout(() => { _updateTrimUI('exp-slider'); _updateTrimUI('expimag-slider'); }, 0);
-        document.getElementById('ctrl-top-handle').addEventListener('click', openControls);
-        document.getElementById('ctrl-bottom-strip').addEventListener('click', peekControls);
       });
     </script>
   </body>
