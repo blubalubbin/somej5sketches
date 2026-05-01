@@ -602,9 +602,16 @@
         if (!slider) return;
         slider.value = def;
         slider.dispatchEvent(new Event('input', { bubbles: true }));
+        // Reset speed to zero.
         const speedSlider = document.getElementById(targetId + '-speed');
         if (speedSlider) speedSlider.value = 0;
         setSliderSpeed(targetId, 0);
+        // Reset oscillation/trim bounds to the slider's full range.
+        if (_oscBounds[targetId]) {
+          _oscBounds[targetId] = { lo: parseFloat(slider.min), hi: parseFloat(slider.max) };
+          _updateTrimUI(targetId);
+        }
+        _syncPlayingState();
       }
 
       function resetAll() {
