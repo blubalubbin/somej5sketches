@@ -49,7 +49,7 @@
       /* ── HUD minimised state ── */
       #hud.minimised .hud-label { display: none; }
       #hud.minimised #hud-text  { display: none; }
-      #minimise-btn { margin-left: auto; }
+      #hud-text { margin-left: auto; }
 
       .ctrl-row {
         display: flex; align-items: center;
@@ -260,11 +260,11 @@
         <button id="share-btn" onclick="copyShareLink()">&#128279; <span class="hud-label">Share</span></button>
         <button id="info-btn" onclick="toggleInfo()">&#9432; <span class="hud-label">Info</span></button>
         <button id="ctrl-btn" onclick="toggleControls()">&#9881; <span class="hud-label">Controls</span></button>
+        <button id="minimise-btn" onclick="toggleHudMinimise()" title="Minimise HUD">&#8863;</button>
         <div id="hud-text">
           <div class="info-name">Rotating sphere v2</div>
           <div class="info-desc">Drag the canvas to rotate &middot; Controls to adjust &middot; PNG to export</div>
         </div>
-        <button id="minimise-btn" onclick="toggleHudMinimise()" title="Minimise HUD">&#8863;</button>
       </div>
 
       <div id="info-panel">
