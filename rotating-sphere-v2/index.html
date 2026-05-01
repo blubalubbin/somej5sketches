@@ -735,15 +735,14 @@
         document.getElementById('overlay').addEventListener('pointerdown', e => {
           const panel = document.getElementById('controls-panel');
           if (!panel.classList.contains('auto-playing')) return;
-          clearTimeout(_revealTimer);
-          if (!panel.classList.contains('revealed')) {
-            // Absorb taps on buttons only — sliders can still be dragged on first touch.
-            if (e.target.closest('.speed-play-btn, .reset-btn')) {
-              e.stopPropagation();
-              e.preventDefault();
-            }
+          if (panel.classList.contains('revealed')) return; // already visible — don't reset the timer
+          // Panel is dimmed: absorb button taps, allow slider interaction, then reveal.
+          if (e.target.closest('.speed-play-btn, .reset-btn')) {
+            e.stopPropagation();
+            e.preventDefault();
           }
           panel.classList.add('revealed');
+          clearTimeout(_revealTimer);
           _revealTimer = setTimeout(() => panel.classList.remove('revealed'), 3000);
         }, { passive: false, capture: true });
       });
