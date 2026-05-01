@@ -31,7 +31,7 @@
          the slider keeps tracking the drag. */
       #controls-panel.dragging { opacity: 0.08; }
       #overlay.canvas-dragging { opacity: 0.08; }
-      #controls-panel.auto-playing { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
+      #controls-panel.auto-playing { opacity: 0.08; transition: opacity 0.5s ease 2s; }
       #controls-panel.auto-playing.revealed { opacity: 1; transition: opacity 0.15s ease; }
       @media (hover: hover) {
         #controls-panel.auto-playing:hover { opacity: 1; transition: opacity 0.15s ease; }
@@ -190,7 +190,7 @@
         transition: opacity 140ms ease;
       }
       #overlay:has(#controls-panel.dragging) #hud { opacity: 0.08; }
-      #overlay:has(#controls-panel.auto-playing) #hud { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
+      #overlay:has(#controls-panel.auto-playing) #hud { opacity: 0.08; transition: opacity 0.5s ease 2s; }
       #overlay:has(#controls-panel.auto-playing.revealed) #hud { opacity: 1; transition: opacity 0.15s ease; }
       @media (hover: hover) {
         #overlay:has(#controls-panel.auto-playing) #hud:hover { opacity: 1; transition: opacity 0.15s ease; }
