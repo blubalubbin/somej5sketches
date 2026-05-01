@@ -31,7 +31,7 @@
          the slider keeps tracking the drag. */
       #controls-panel.dragging { opacity: 0.08; }
       #overlay.canvas-dragging { opacity: 0.08; }
-      #controls-panel.auto-playing { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
+      #controls-panel.auto-playing { opacity: 0.08; transition: opacity 0.5s ease 2s; }
       #controls-panel.auto-playing.revealed { opacity: 1; transition: opacity 0.15s ease; }
       @media (hover: hover) {
         #controls-panel.auto-playing:hover { opacity: 1; transition: opacity 0.15s ease; }
@@ -55,7 +55,7 @@
       #hud.minimised .hud-label { display: none; }
       #hud.minimised #hud-text  { display: none; }
       #hud.minimised { flex-wrap: nowrap; }
-      #hud-text { margin-left: auto; }
+      #hud-text { flex-basis: 100%; }
 
       .ctrl-row {
         display: flex; align-items: center;
@@ -190,6 +190,11 @@
         transition: opacity 140ms ease;
       }
       #overlay:has(#controls-panel.dragging) #hud { opacity: 0.08; }
+      #overlay:has(#controls-panel.auto-playing) #hud { opacity: 0.08; transition: opacity 0.5s ease 2s; }
+      #overlay:has(#controls-panel.auto-playing.revealed) #hud { opacity: 1; transition: opacity 0.15s ease; }
+      @media (hover: hover) {
+        #overlay:has(#controls-panel.auto-playing) #hud:hover { opacity: 1; transition: opacity 0.15s ease; }
+      }
       #hud a.back {
         display: flex; align-items: center; gap: 0.35rem;
         padding: 0.6rem 1.25rem;
@@ -270,14 +275,14 @@
 
       <div id="hud">
         <a class="back" href="../">&#8592; <span class="hud-label">Index</span></a>
-        <button id="shot-btn" onclick="exportScreenshot()">&#8595; <span class="hud-label">PNG</span></button>
-        <button id="share-btn" onclick="copyShareLink()">&#128279; <span class="hud-label">Share</span></button>
+        <button id="shot-btn" onclick="exportScreenshot()">&#8595; <span class="hud-label">Download</span></button>
+        <button id="share-btn" onclick="copyShareLink()">&#11014; <span class="hud-label">Share</span></button>
         <button id="info-btn" onclick="toggleInfo()">&#9432; <span class="hud-label">Info</span></button>
         <button id="ctrl-btn" onclick="toggleControls()">&#9881; <span class="hud-label">Controls</span></button>
         <button id="minimise-btn" onclick="toggleHudMinimise()" title="Minimise HUD">&#8863;</button>
         <div id="hud-text">
           <div class="info-name">Rotating sphere v2</div>
-          <div class="info-desc">Drag the canvas to rotate &middot; Controls to adjust &middot; PNG to export</div>
+          <div class="info-desc">Drag the canvas to rotate &middot; Controls to adjust &middot; Download to export</div>
         </div>
       </div>
 
@@ -287,8 +292,8 @@
         <div class="info-grid">
           <div class="info-grid-item"><strong>Drag canvas</strong>rotate the sphere</div>
           <div class="info-grid-item"><strong>&#9881; Controls</strong>adjust axis, warp &amp; centre parameters</div>
-          <div class="info-grid-item"><strong>&#8595; PNG</strong>export a settings panel + image</div>
-          <div class="info-grid-item"><strong>&#128279; Share</strong>copy a link with all current settings</div>
+          <div class="info-grid-item"><strong>&#8595; Download</strong>export a settings panel + image</div>
+          <div class="info-grid-item"><strong>&#11014; Share</strong>copy a link with all current settings</div>
           <div class="info-grid-item"><strong>▶ button</strong>click to start auto-cycling a slider; click again to stop</div>
           <div class="info-grid-item"><strong>Trim handles</strong>drag the range handles to set cycle bounds</div>
         </div>
@@ -720,9 +725,9 @@
         if (anyPlaying) pauseAll(); else resumeAll();
       }
 
-      // Tap/click the transparent panel to reveal it for 3s (needed on iOS where hover doesn't exist).
+      // Tap/click anywhere in the overlay to reveal the panel + HUD for 3s (needed on iOS where hover doesn't exist).
       document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('controls-panel').addEventListener('pointerdown', () => {
+        document.getElementById('overlay').addEventListener('pointerdown', () => {
           const panel = document.getElementById('controls-panel');
           if (!panel.classList.contains('auto-playing')) return;
           panel.classList.add('revealed');
