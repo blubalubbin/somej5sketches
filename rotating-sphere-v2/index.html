@@ -268,6 +268,30 @@
         transition: opacity 180ms ease;
       }
       #toast.show { opacity: 1; }
+
+      /* ── Slider cycle animations ── */
+      /* Play button pops on wrap-around */
+      @keyframes _btn-wrap-pop {
+        0%   { transform: scale(1);   opacity: 1; }
+        25%  { transform: scale(0);   opacity: 0; }
+        60%  { transform: scale(1.4); opacity: 1; }
+        100% { transform: scale(1);   opacity: 1; }
+      }
+      .speed-play-btn.anim-wrap { animation: _btn-wrap-pop 0.35s ease; }
+
+      /* Slider nudges right/left when it smacks a bound */
+      @keyframes _slider-hit-hi {
+        0%, 100% { transform: translateX(0); }
+        35%       { transform: translateX(6px) scaleX(1.015); }
+        70%       { transform: translateX(-2px); }
+      }
+      @keyframes _slider-hit-lo {
+        0%, 100% { transform: translateX(0); }
+        35%       { transform: translateX(-6px) scaleX(1.015); }
+        70%       { transform: translateX(2px); }
+      }
+      input[type="range"].anim-hit-hi { animation: _slider-hit-hi 0.22s ease; }
+      input[type="range"].anim-hit-lo { animation: _slider-hit-lo 0.22s ease; }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
   </head>
@@ -800,17 +824,33 @@
             const ob  = _getOscBounds(id);
             const lo  = Math.max(min, ob.lo), hi = Math.min(max, ob.hi);
             if (_sliderBounceDir[id] === undefined) _sliderBounceDir[id] = 1;
-            let dir = _sliderBounceDir[id];
+            const prevDir = _sliderBounceDir[id];
+            let dir = prevDir;
             v += Math.abs(speed) * dir;
             if (v > hi) { v = 2 * hi - v; dir = -1; }
             else if (v < lo) { v = 2 * lo - v; dir = 1; }
             v = Math.max(lo, Math.min(hi, v));
             _sliderBounceDir[id] = dir;
+            // Animate the slider input when it smacks a bound.
+            if (dir !== prevDir && !slider.classList.contains('anim-hit-hi') && !slider.classList.contains('anim-hit-lo')) {
+              const cls = dir === -1 ? 'anim-hit-hi' : 'anim-hit-lo';
+              slider.classList.add(cls);
+              slider.addEventListener('animationend', () => slider.classList.remove(cls), { once: true });
+            }
           } else {
             // Wrap within bounds (rotation slider and others).
             v += speed;
+            const wrapped = v > max || v < min;
             if (v > max)      v = min + ((v - min) % span);
             else if (v < min) v = max - ((min - v) % span);
+            // Pop the play button on wrap-around.
+            if (wrapped) {
+              const btn = document.getElementById(id + '-play-btn');
+              if (btn && !btn.classList.contains('anim-wrap')) {
+                btn.classList.add('anim-wrap');
+                btn.addEventListener('animationend', () => btn.classList.remove('anim-wrap'), { once: true });
+              }
+            }
           }
           if (step > 0) v = min + Math.round((v - min) / step) * step;
           slider.value = v;
