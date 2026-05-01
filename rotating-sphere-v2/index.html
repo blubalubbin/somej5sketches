@@ -30,6 +30,7 @@
          underneath is visible. Opacity does not block pointer events, so
          the slider keeps tracking the drag. */
       #controls-panel.dragging { opacity: 0.08; }
+      #overlay.canvas-dragging { opacity: 0.08; }
 
       .ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
 
@@ -694,6 +695,7 @@
           _startX = e.clientX;
           _startOffset = (typeof rotOffset !== 'undefined') ? rotOffset : 0;
           _pid = e.pointerId;
+          document.getElementById('overlay').classList.add('canvas-dragging');
         });
 
         document.addEventListener('pointermove', e => {
@@ -715,7 +717,10 @@
 
         ['pointerup', 'pointercancel'].forEach(ev =>
           document.addEventListener(ev, e => {
-            if (e.pointerId === _pid) _active = false;
+            if (e.pointerId === _pid) {
+              _active = false;
+              document.getElementById('overlay').classList.remove('canvas-dragging');
+            }
           })
         );
       })();
