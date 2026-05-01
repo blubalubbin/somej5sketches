@@ -35,8 +35,21 @@
       .ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
 
       /* ── slider group: main row + collapsible speed sub-row ── */
-      .slider-group { margin-bottom: 0.65rem; }
+      .slider-group {
+        margin-bottom: 0.65rem;
+        border-radius: 6px;
+        background-color: transparent;
+        transition: background-color 0.3s ease;
+        padding: 0 0.25rem;
+        margin-left: -0.25rem; margin-right: -0.25rem;
+      }
       .slider-group > .ctrl-row { margin-bottom: 0; }
+      .slider-group.highlighted { background-color: rgba(88,166,255,0.07); }
+
+      /* ── HUD minimised state ── */
+      #hud.minimised .hud-label { display: none; }
+      #hud.minimised #hud-text  { display: none; }
+      #minimise-btn { margin-left: auto; }
 
       .ctrl-row {
         display: flex; align-items: center;
@@ -242,15 +255,16 @@
     <div id="overlay">
 
       <div id="hud">
-        <a class="back" href="../">&#8592; Index</a>
-        <button id="shot-btn" onclick="exportScreenshot()">&#8595; PNG</button>
-        <button id="share-btn" onclick="copyShareLink()">&#128279; Share</button>
-        <button id="info-btn" onclick="toggleInfo()">&#9432; Info</button>
-        <button id="ctrl-btn" onclick="toggleControls()">&#9881; Controls</button>
+        <a class="back" href="../">&#8592; <span class="hud-label">Index</span></a>
+        <button id="shot-btn" onclick="exportScreenshot()">&#8595; <span class="hud-label">PNG</span></button>
+        <button id="share-btn" onclick="copyShareLink()">&#128279; <span class="hud-label">Share</span></button>
+        <button id="info-btn" onclick="toggleInfo()">&#9432; <span class="hud-label">Info</span></button>
+        <button id="ctrl-btn" onclick="toggleControls()">&#9881; <span class="hud-label">Controls</span></button>
         <div id="hud-text">
           <div class="info-name">Rotating sphere v2</div>
           <div class="info-desc">Drag the canvas to rotate &middot; Controls to adjust &middot; PNG to export</div>
         </div>
+        <button id="minimise-btn" onclick="toggleHudMinimise()" title="Minimise HUD">&#8863;</button>
       </div>
 
       <div id="info-panel">
@@ -575,6 +589,35 @@
       function resetAll() {
         for (const id of Object.keys(_sliderDefaults)) resetSlider(id);
       }
+
+      function toggleHudMinimise() {
+        const hud = document.getElementById('hud');
+        const btn = document.getElementById('minimise-btn');
+        const minimised = hud.classList.toggle('minimised');
+        btn.textContent = minimised ? '⊞' : '⊿';
+        btn.title = minimised ? 'Expand HUD' : 'Minimise HUD';
+      }
+
+      // ── Slider row highlight ────────────────────────────────────────────
+      (function () {
+        const _hTimers = {};
+        function highlight(e) {
+          const group = e.target.closest('.slider-group');
+          if (!group) return;
+          const key = group.querySelector('input[type="range"]')?.id;
+          if (!key) return;
+          if (_hTimers[key]) clearTimeout(_hTimers[key]);
+          group.classList.add('highlighted');
+          _hTimers[key] = setTimeout(() => {
+            group.classList.remove('highlighted');
+            delete _hTimers[key];
+          }, 3000);
+        }
+        const panel = document.getElementById('controls-panel');
+        panel.addEventListener('mouseover', highlight);
+        panel.addEventListener('focusin',   highlight);
+        panel.addEventListener('input',     highlight);
+      })();
 
       // ── Slider auto-cycling ─────────────────────────────────────────────
       // Each slider can have a non-zero "speed" that advances its value every
