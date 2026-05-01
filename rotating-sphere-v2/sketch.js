@@ -82,7 +82,7 @@ function getSettings() {
     cx: +coordCenterX.toFixed(3),
     cy: +coordCenterY.toFixed(3),
     cz: +coordCenterZ.toFixed(3),
-    ro: +rotOffset.toFixed(3),
+    ro: +(rotOffset * 180 / Math.PI).toFixed(1),
   };
 }
 
@@ -117,7 +117,7 @@ function applySettingsFromHash() {
   if ('cx' in s) coordCenterX = num(s.cx, coordCenterX);
   if ('cy' in s) coordCenterY = num(s.cy, coordCenterY);
   if ('cz' in s) coordCenterZ = num(s.cz, coordCenterZ);
-  if ('ro' in s) rotOffset    = num(s.ro, rotOffset);
+  if ('ro' in s) rotOffset    = num(s.ro, rotOffset * 180 / Math.PI) * Math.PI / 180;
 }
 
 // Real part of sign(v)·|v|^(a+ib).  At a=1, b=0 this is the identity.
