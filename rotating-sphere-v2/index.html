@@ -282,10 +282,8 @@
 
       <div id="controls-panel">
         <div class="ctrl-row" style="margin-bottom:0.75rem;">
-          <span class="ctrl-label" style="color:#555;font-size:0.85rem;">All</span>
-          <div style="flex:1"></div>
-          <span class="ctrl-value"></span>
           <button class="speed-play-btn" onclick="resetAll()">&#8634; Reset all</button>
+          <div style="flex:1"></div>
           <button class="speed-play-btn" id="pause-all-btn" onclick="pauseAll()">&#9646;&#9646; Pause all</button>
         </div>
         <div class="ctrl-heading">Rotation axis</div>
@@ -330,7 +328,7 @@
           <div class="ctrl-row">
             <button class="reset-btn" onclick="resetSlider('rot-offset-slider')">&#8634;</button>
             <span class="ctrl-label">Rotation about axis</span>
-            <input id="rot-offset-slider" type="range" min="0" max="6.2832" step="0.01" value="0"
+            <input id="rot-offset-slider" type="range" min="-3.1416" max="3.1416" step="0.01" value="0"
               oninput="setRotOffset(this.value);
                        document.getElementById('rot-offset-val').textContent=(+this.value*180/Math.PI).toFixed(1)+'°'">
             <span class="ctrl-value" id="rot-offset-val">0.0°</span>
