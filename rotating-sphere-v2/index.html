@@ -71,6 +71,7 @@
         min-width: 52px; text-align: right;
         color: #58a6ff; font-size: 0.9rem;
         font-variant-numeric: tabular-nums;
+        cursor: ew-resize; user-select: none;
       }
       .axis-readout {
         margin-top: 0.4rem; color: #555;
@@ -926,7 +927,7 @@
           let slider;
           if (t instanceof HTMLInputElement && t.type === 'range') {
             slider = t;
-          } else if (t.closest('.ctrl-label')) {
+          } else if (t.closest('.ctrl-label') || t.closest('.ctrl-value')) {
             const row = t.closest('.ctrl-row');
             slider = row && row.querySelector('input[type="range"]');
           }
