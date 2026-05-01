@@ -191,8 +191,10 @@
         transition: opacity 140ms ease;
       }
       #overlay:has(#controls-panel.dragging) #hud { opacity: 0.08; }
-      #overlay:has(#controls-panel.auto-playing) #hud { opacity: 0.08; transition: opacity 0.5s ease 2s; }
+      #hud.dragging { opacity: 0.08; transition: opacity 140ms ease; }
+      #overlay:has(#controls-panel.auto-playing) #hud { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
       #overlay:has(#controls-panel.auto-playing.revealed) #hud { opacity: 1; transition: opacity 0.15s ease; }
+      #overlay:has(#controls-panel.auto-playing.revealed) #hud.dragging { opacity: 0.08; transition: opacity 140ms ease; }
       @media (hover: hover) {
         #overlay:has(#controls-panel.auto-playing) #hud:hover { opacity: 1; transition: opacity 0.15s ease; }
       }
@@ -735,8 +737,11 @@
           if (!panel.classList.contains('auto-playing')) return;
           clearTimeout(_revealTimer);
           if (!panel.classList.contains('revealed')) {
-            e.stopPropagation();
-            e.preventDefault();
+            // Absorb taps on buttons only — sliders can still be dragged on first touch.
+            if (e.target.closest('.speed-play-btn, .reset-btn')) {
+              e.stopPropagation();
+              e.preventDefault();
+            }
           }
           panel.classList.add('revealed');
           _revealTimer = setTimeout(() => panel.classList.remove('revealed'), 3000);
@@ -913,6 +918,8 @@
           _draggingSliderId = null;
           const p = panel();
           if (p) p.classList.remove('dragging');
+          const hud = document.getElementById('hud');
+          if (hud) hud.classList.remove('dragging');
         }
 
         document.addEventListener('pointerdown', e => {
@@ -932,6 +939,8 @@
           _prevClientX = e.clientX;
           _draggingSliderId = slider.id;
           panel().classList.add('dragging');
+          const hud = document.getElementById('hud');
+          if (hud) hud.classList.add('dragging');
           if (slider.closest('.speed-row')) {
             const group = slider.closest('.slider-group');
             if (group) group.classList.add('dragging-speed');
