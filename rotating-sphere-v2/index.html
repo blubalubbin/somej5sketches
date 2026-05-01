@@ -32,7 +32,10 @@
       #controls-panel.dragging { opacity: 0.08; }
       #overlay.canvas-dragging { opacity: 0.08; }
       #controls-panel.auto-playing { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
-      #controls-panel.auto-playing:hover { opacity: 1; transition: opacity 0.15s ease; }
+      #controls-panel.auto-playing.revealed { opacity: 1; transition: opacity 0.15s ease; }
+      @media (hover: hover) {
+        #controls-panel.auto-playing:hover { opacity: 1; transition: opacity 0.15s ease; }
+      }
 
       .ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
 
@@ -295,7 +298,7 @@
         <div class="ctrl-row" style="margin-bottom:0.75rem;">
           <button class="speed-play-btn" onclick="resetAll()">&#8634; Reset all</button>
           <div style="flex:1"></div>
-          <button class="speed-play-btn" id="pause-all-btn" onclick="pauseAll()">&#9646;&#9646; Pause all</button>
+          <button class="speed-play-btn" id="pause-all-btn" onclick="toggleAllPlay()">&#9654; Play all</button>
         </div>
         <div class="ctrl-heading">Rotation axis</div>
 
@@ -692,10 +695,41 @@
         }
       }
 
+      let _revealTimer = null;
       function _syncPlayingState() {
         const anyPlaying = Object.values(_sliderSpeeds).some(s => s !== 0);
-        document.getElementById('controls-panel').classList.toggle('auto-playing', anyPlaying);
+        const panel = document.getElementById('controls-panel');
+        panel.classList.toggle('auto-playing', anyPlaying);
+        if (!anyPlaying) panel.classList.remove('revealed');
+        const btn = document.getElementById('pause-all-btn');
+        if (btn) btn.textContent = anyPlaying ? '⏸ Pause all' : '▶ Play all';
       }
+
+      function resumeAll() {
+        for (const id of Object.keys(_sliderDefaultSpeeds)) {
+          const speed = _sliderLastSpeeds[id] ?? _sliderDefaultSpeeds[id];
+          const speedSlider = document.getElementById(id + '-speed');
+          if (speedSlider) speedSlider.value = speed;
+          setSliderSpeed(id, speed);
+        }
+        _syncPlayingState();
+      }
+
+      function toggleAllPlay() {
+        const anyPlaying = Object.values(_sliderSpeeds).some(s => s !== 0);
+        if (anyPlaying) pauseAll(); else resumeAll();
+      }
+
+      // Tap/click the transparent panel to reveal it for 3s (needed on iOS where hover doesn't exist).
+      document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('controls-panel').addEventListener('pointerdown', () => {
+          const panel = document.getElementById('controls-panel');
+          if (!panel.classList.contains('auto-playing')) return;
+          panel.classList.add('revealed');
+          clearTimeout(_revealTimer);
+          _revealTimer = setTimeout(() => panel.classList.remove('revealed'), 3000);
+        }, { passive: true });
+      });
 
       function toggleSliderSpeed(targetId) {
         const current = _sliderSpeeds[targetId] || 0;
