@@ -737,8 +737,11 @@
           if (!panel.classList.contains('auto-playing')) return;
           clearTimeout(_revealTimer);
           if (!panel.classList.contains('revealed')) {
-            e.stopPropagation();
-            e.preventDefault();
+            // Absorb taps on buttons only — sliders can still be dragged on first touch.
+            if (e.target.closest('.speed-play-btn, .reset-btn')) {
+              e.stopPropagation();
+              e.preventDefault();
+            }
           }
           panel.classList.add('revealed');
           _revealTimer = setTimeout(() => panel.classList.remove('revealed'), 3000);
