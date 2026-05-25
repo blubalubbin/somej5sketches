@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fluid Simulation</title>
+    <style>
+      body { margin: 0; overflow: hidden; background: #000; }
+
+      #overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        z-index: 10;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        color: #eee;
+        font-size: 1rem;
+      }
+
+      /* ── controls panel ── */
+      #controls-panel {
+        display: none;
+        padding: 1rem 1.25rem;
+        background: rgba(0,0,0,0.82);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        transition: opacity 140ms ease;
+        max-height: calc(100vh - 4.5rem);
+        overflow-y: auto;
+      }
+      #controls-panel.open { display: block; }
+      /* Fade panel while dragging so the fluid canvas stays visible underneath */
+      #controls-panel.dragging { opacity: 0.08; }
+      #overlay.canvas-dragging { opacity: 0.08; }
+      #controls-panel.auto-playing { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
+      #controls-panel.auto-playing.revealed { opacity: 1; transition: opacity 0.15s ease; }
+      #controls-panel.auto-playing.dragging { opacity: 0.08; transition: opacity 140ms ease; }
+      @media (hover: hover) {
+        #controls-panel.auto-playing:hover { opacity: 1; transition: opacity 0.15s ease; }
+      }
+
+      .ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
+      .ctrl-heading.section-heading {
+        display: flex; align-items: center; gap: 0.6rem;
+      }
+
+      /* ── slider group: main row + collapsible speed sub-row ── */
+      .slider-group {
+        margin-bottom: 0.65rem;
+        border-radius: 6px;
+        background-color: transparent;
+        transition: background-color 0.3s ease;
+        padding: 0 0.25rem;
+        margin-left: -0.25rem; margin-right: -0.25rem;
+      }
+      .slider-group > .ctrl-row { margin-bottom: 0; }
+      .slider-group.highlighted { background-color: rgba(88,166,255,0.07); }
+
+      .ctrl-row {
+        display: flex; align-items: center;
+        gap: 0.9rem; margin-bottom: 0.65rem;
+      }
+      .ctrl-label  { min-width: 110px; color: #bbb; font-size: 0.9rem; cursor: ew-resize; user-select: none; }
+      input[type="range"] {
+        flex: 1; accent-color: #58a6ff;
+        height: 2rem; cursor: pointer;
+      }
+      .ctrl-value {
+        min-width: 64px; text-align: right;
+        color: #58a6ff; font-size: 0.9rem;
+        font-variant-numeric: tabular-nums;
+        cursor: ew-resize; user-select: none;
+      }
+
+      /* speed sub-row */
+      .speed-row {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        padding: 0.1rem 0 0.2rem;
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        transition: max-height 0.2s ease, opacity 0.2s ease;
+      }
+      .slider-group.has-speed .speed-row { max-height: 2.5rem; opacity: 1; }
+      .speed-label {
+        min-width: 110px;
+        color: #888; font-size: 0.75rem;
+        font-style: italic;
+        padding-left: 0.4rem;
+      }
+      .speed-value {
+        min-width: 64px; text-align: right;
+        color: #888; font-size: 0.75rem;
+        font-variant-numeric: tabular-nums;
+      }
+      .speed-row input[type="range"] {
+        accent-color: #e0a050;
+        height: 1.4rem;
+      }
+      .slider-group.has-speed .speed-value { color: #e0a050; }
+      .speed-play-btn {
+        background: none; border: 1px solid #444; border-radius: 3px;
+        cursor: pointer; color: #888; font-size: 0.7rem;
+        padding: 0.35rem 0.65rem; line-height: 1; flex-shrink: 0;
+      }
+      .speed-play-btn:hover { color: #e0a050; border-color: #e0a050; }
+      .slider-group.has-speed .speed-play-btn { color: #e0a050; border-color: #e0a050; }
+      .reset-btn {
+        background: none; border: 1px solid #333; border-radius: 3px;
+        cursor: pointer; color: #444; font-size: 0.75rem;
+        padding: 0.2rem 0.45rem; line-height: 1; flex-shrink: 0;
+      }
+      .reset-btn:hover { color: #aaa; border-color: #777; }
+
+      /* ── HUD bar ── */
+      #hud {
+        display: flex; align-items: center;
+        flex-wrap: wrap; gap: 1rem;
+        padding: 1rem 1.25rem;
+        background: rgba(0,0,0,0.55);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        transition: opacity 140ms ease;
+      }
+      #overlay:has(#controls-panel.dragging) #hud { opacity: 0.08; }
+      #hud.dragging { opacity: 0.08; transition: opacity 140ms ease; }
+      #overlay:has(#controls-panel.auto-playing.open) #hud { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
+      #overlay:has(#controls-panel.auto-playing.open.revealed) #hud { opacity: 1; transition: opacity 0.15s ease; }
+      #overlay:has(#controls-panel.auto-playing.open.revealed) #hud.dragging { opacity: 0.08; transition: opacity 140ms ease; }
+      @media (hover: hover) {
+        #overlay:has(#controls-panel.auto-playing.open) #hud:hover { opacity: 1; transition: opacity 0.15s ease; }
+      }
+      #hud a.back {
+        display: flex; align-items: center; gap: 0.35rem;
+        padding: 0.6rem 1.25rem;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px; color: #eee;
+        text-decoration: none; white-space: nowrap; flex-shrink: 0;
+      }
+      #hud a.back:hover { background: rgba(255,255,255,0.2); }
+      #hud button {
+        padding: 0.6rem 1.25rem;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px; color: #eee;
+        font-size: 1rem; cursor: pointer;
+        white-space: nowrap; flex-shrink: 0;
+      }
+      #hud button:hover { background: rgba(255,255,255,0.2); }
+      #hud button.active {
+        background: rgba(88,166,255,0.18);
+        border-color: rgba(88,166,255,0.5);
+      }
+
+      /* ── Info panel ── */
+      #info-panel {
+        display: none;
+        padding: 1rem 1.25rem 1.2rem;
+        background: rgba(0,0,0,0.78);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+        font-size: 0.9rem;
+        color: #ccc;
+      }
+      #info-panel.open { display: block; }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 0.6rem 2rem;
+        margin-top: 0.5rem;
+      }
+      .info-grid-item strong { color: #eee; margin-right: 0.4rem; }
+      #info-close {
+        float: right; margin-left: 1rem;
+        background: none; border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 6px; color: #aaa;
+        font-size: 0.8rem; cursor: pointer;
+        padding: 0.25rem 0.7rem; line-height: 1.4;
+      }
+      #info-close:hover { color: #eee; border-color: rgba(255,255,255,0.4); }
+
+      /* transient toast */
+      #toast {
+        position: fixed;
+        left: 50%; bottom: 1.2rem;
+        transform: translateX(-50%);
+        padding: 0.55rem 0.9rem;
+        background: rgba(20,40,30,0.92);
+        border: 1px solid rgba(120,200,150,0.45);
+        border-radius: 8px;
+        color: #cfead8;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 0.9rem;
+        z-index: 30;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 180ms ease;
+      }
+      #toast.show { opacity: 1; }
+
+      /* ── Glassy parameter tip ── */
+      #tip-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 6;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding: clamp(1.25rem, 5vw, 4rem);
+        opacity: 0;
+        transition: opacity 240ms ease;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      }
+      #tip-overlay.show { opacity: 1; }
+
+      .tip-eyebrow {
+        font-size: clamp(0.7rem, 1.5vw, 1rem);
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgba(255,255,255,0.78);
+        text-shadow: 0 1px 8px rgba(0,0,0,0.55);
+        margin-bottom: 0.5rem;
+      }
+      .tip-headline {
+        font-size: clamp(2.4rem, 9vw, 7rem);
+        font-weight: 800;
+        line-height: 0.98;
+        letter-spacing: -0.02em;
+        margin: 0 0 0.55rem;
+        color: transparent;
+        -webkit-text-stroke: 1.2px rgba(255,255,255,0.72);
+        text-stroke: 1.2px rgba(255,255,255,0.72);
+        backdrop-filter: blur(9px) saturate(180%) brightness(1.18);
+        -webkit-backdrop-filter: blur(9px) saturate(180%) brightness(1.18);
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+      }
+      #tip-lower {
+        align-self: flex-start;
+        max-width: min(92vw, 560px);
+        margin-top: 0.1rem;
+        padding: 0.7rem 0.95rem;
+        border-radius: 14px;
+        background: rgba(8,10,16,0.22);
+        backdrop-filter: blur(14px) saturate(150%) brightness(0.78);
+        -webkit-backdrop-filter: blur(14px) saturate(150%) brightness(0.78);
+        border: 1px solid rgba(255,255,255,0.16);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.18);
+      }
+      .tip-lead {
+        font-size: clamp(1.05rem, 2.6vw, 1.9rem);
+        font-weight: 600;
+        line-height: 1.25;
+        max-width: 24ch;
+        color: #fff;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        margin-bottom: 0.55rem;
+      }
+      .tip-note {
+        font-size: clamp(0.92rem, 1.9vw, 1.2rem);
+        line-height: 1.5;
+        max-width: 48ch;
+        color: rgba(238,242,250,0.95);
+        text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      }
+      .tip-note strong { color: #fff; font-weight: 700; }
+
+      .speed-play-btn.toggled-on {
+        color: #cfe3ff;
+        border-color: #7aa7d8;
+        background: rgba(120,160,220,0.14);
+      }
+
+      /* ── Slider cycle animations ── */
+      @keyframes _slider-wrap-pop {
+        0%   { transform: scaleY(1);    opacity: 1; }
+        25%  { transform: scaleY(0.05); opacity: 0.3; }
+        60%  { transform: scaleY(1.35); opacity: 1; }
+        100% { transform: scaleY(1);    opacity: 1; }
+      }
+      input[type="range"].anim-wrap { animation: _slider-wrap-pop 0.35s ease; }
+
+      @keyframes _slider-hit-hi {
+        0%, 100% { transform: translateX(0); }
+        35%       { transform: translateX(6px) scaleX(1.015); }
+        70%       { transform: translateX(-2px); }
+      }
+      @keyframes _slider-hit-lo {
+        0%, 100% { transform: translateX(0); }
+        35%       { transform: translateX(-6px) scaleX(1.015); }
+        70%       { transform: translateX(2px); }
+      }
+      input[type="range"].anim-hit-hi { animation: _slider-hit-hi 0.22s ease; }
+      input[type="range"].anim-hit-lo { animation: _slider-hit-lo 0.22s ease; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+  </head>
+  <body>
+    <script src="sketch.js"></script>
+
+    <div id="overlay">
+
+      <div id="hud">
+        <a class="back" href="../">&#8592; <span class="hud-label">Index</span></a>
+        <button id="info-btn" onclick="toggleInfo()">&#9432; <span class="hud-label">Info</span></button>
+        <button id="ctrl-btn" onclick="toggleControls()">&#9881; <span class="hud-label">Controls</span></button>
+        <button id="shot-btn" onclick="exportScreenshot()">&#8595; <span class="hud-label">Download</span></button>
+        <button id="share-btn" onclick="copyShareLink()">&#11014; <span class="hud-label">Share</span></button>
+      </div>
+
+      <div id="info-panel">
+        <button id="info-close" onclick="closeInfo()">&#10005; Minimise</button>
+        <strong style="color:#eee;">Fluid Simulation</strong>
+        <p style="margin:0.5rem 0 0.6rem;color:#aaa;font-size:0.87rem;max-width:60ch;">
+          A 16×16 Navier-Stokes fluid grid advects 32 k particle tracers.
+          Move the mouse to push the fluid; adjust viscosity, diffusion, and particle
+          settings in Controls. Based on
+          <a href="http://www.dgp.toronto.edu/people/stam/reality/Research/pdf/GDC03.pdf"
+             style="color:#58a6ff;" target="_blank" rel="noopener">Jos Stam's GDC 2003 paper</a>.
+        </p>
+        <div class="info-grid">
+          <div class="info-grid-item"><strong>Mouse</strong>push the fluid</div>
+          <div class="info-grid-item"><strong>&#9881; Controls</strong>adjust fluid &amp; particle parameters</div>
+          <div class="info-grid-item"><strong>&#8595; Download</strong>export a settings panel + image</div>
+          <div class="info-grid-item"><strong>&#11014; Share</strong>copy a link with all current settings</div>
+          <div class="info-grid-item"><strong>▶ button</strong>start auto-cycling a slider; click again to stop</div>
+          <div class="info-grid-item"><strong>Trail fade</strong>lower = longer motion trails</div>
+        </div>
+      </div>
+
+      <div id="controls-panel">
+        <!-- Global toolbar -->
+        <div class="ctrl-row" style="margin-bottom:0.75rem;">
+          <button class="speed-play-btn" onclick="resetAll();_syncControlsFromState();">&#8634; Reset all</button>
+          <button class="speed-play-btn" id="tips-btn" onclick="toggleTips()">&#128161; Tips</button>
+          <div style="flex:1"></div>
+          <button class="speed-play-btn" id="pause-all-btn" onclick="toggleAllPlay()">&#9654; Play all</button>
+        </div>
+
+        <!-- ── Fluid physics ── -->
+        <div class="ctrl-heading section-heading">
+          <span>Fluid physics</span>
+          <button class="reset-btn" onclick="resetSection('physics')" title="Reset physics">&#8634;</button>
+        </div>
+
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('viscosity-slider')">&#8634;</button>
+            <span class="ctrl-label">Viscosity</span>
+            <input id="viscosity-slider" type="range" min="0" max="0.005" step="0.00001" value="0.00025"
+              oninput="setViscosity(+this.value);
+                       document.getElementById('viscosity-val').textContent=(+this.value).toFixed(5)">
+            <span class="ctrl-value" id="viscosity-val">0.00025</span>
+            <button class="speed-play-btn" id="viscosity-slider-play-btn" onclick="toggleSliderSpeed('viscosity-slider')">▶</button>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="viscosity-slider-speed" type="range" min="0" max="0.0002" step="0.000001" value="0"
+              oninput="setSliderSpeed('viscosity-slider', this.value)">
+            <span class="speed-value" id="viscosity-slider-speed-val">0.000000</span>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('diffusion-slider')">&#8634;</button>
+            <span class="ctrl-label">Diffusion</span>
+            <input id="diffusion-slider" type="range" min="0" max="0.15" step="0.001" value="0.03"
+              oninput="setDiffusion(+this.value);
+                       document.getElementById('diffusion-val').textContent=(+this.value).toFixed(3)">
+            <span class="ctrl-value" id="diffusion-val">0.030</span>
+            <button class="speed-play-btn" id="diffusion-slider-play-btn" onclick="toggleSliderSpeed('diffusion-slider')">▶</button>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="diffusion-slider-speed" type="range" min="0" max="0.005" step="0.0001" value="0"
+              oninput="setSliderSpeed('diffusion-slider', this.value)">
+            <span class="speed-value" id="diffusion-slider-speed-val">0.0000</span>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('force-slider')">&#8634;</button>
+            <span class="ctrl-label">Force scale</span>
+            <input id="force-slider" type="range" min="0" max="60" step="1" value="10"
+              oninput="setForceScale(+this.value);
+                       document.getElementById('force-val').textContent=(+this.value).toFixed(0)">
+            <span class="ctrl-value" id="force-val">10</span>
+            <button class="speed-play-btn" id="force-slider-play-btn" onclick="toggleSliderSpeed('force-slider')">▶</button>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="force-slider-speed" type="range" min="0" max="1" step="0.01" value="0"
+              oninput="setSliderSpeed('force-slider', this.value)">
+            <span class="speed-value" id="force-slider-speed-val">0.00</span>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('maxmouse-slider')">&#8634;</button>
+            <span class="ctrl-label">Max mouse vel</span>
+            <input id="maxmouse-slider" type="range" min="1" max="80" step="1" value="10"
+              oninput="setMaxMouse(+this.value);
+                       document.getElementById('maxmouse-val').textContent=(+this.value).toFixed(0)">
+            <span class="ctrl-value" id="maxmouse-val">10</span>
+            <button class="speed-play-btn" id="maxmouse-slider-play-btn" onclick="toggleSliderSpeed('maxmouse-slider')">▶</button>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="maxmouse-slider-speed" type="range" min="0" max="2" step="0.05" value="0"
+              oninput="setSliderSpeed('maxmouse-slider', this.value)">
+            <span class="speed-value" id="maxmouse-slider-speed-val">0.00</span>
+          </div>
+        </div>
+
+        <!-- ── Particles ── -->
+        <div class="ctrl-heading section-heading" style="margin-top:1rem;">
+          <span>Particles</span>
+          <button class="reset-btn" onclick="resetSection('particles')" title="Reset particles">&#8634;</button>
+        </div>
+
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('hue-slider')">&#8634;</button>
+            <span class="ctrl-label">Hue</span>
+            <input id="hue-slider" type="range" min="0" max="360" step="1" value="180"
+              oninput="setParticleHue(+this.value);
+                       document.getElementById('hue-val').textContent=(+this.value).toFixed(0)+'°'">
+            <span class="ctrl-value" id="hue-val">180°</span>
+            <button class="speed-play-btn" id="hue-slider-play-btn" onclick="toggleSliderSpeed('hue-slider')">▶</button>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="hue-slider-speed" type="range" min="-5" max="5" step="0.1" value="0"
+              oninput="setSliderSpeed('hue-slider', this.value)">
+            <span class="speed-value" id="hue-slider-speed-val">0.0</span>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <div class="ctrl-row">
+            <button class="reset-btn" onclick="resetSlider('trail-slider')">&#8634;</button>
+            <span class="ctrl-label">Trail fade</span>
+            <input id="trail-slider" type="range" min="5" max="120" step="1" value="40"
+              oninput="setTrailOpacity(+this.value);
+                       document.getElementById('trail-val').textContent=(+this.value).toFixed(0)">
+            <span class="ctrl-value" id="trail-val">40</span>
+            <button class="speed-play-btn" id="trail-slider-play-btn" onclick="toggleSliderSpeed('trail-slider')">▶</button>
+          </div>
+          <div class="speed-row">
+            <span class="speed-label">↻ speed</span>
+            <input id="trail-slider-speed" type="range" min="0" max="2" step="0.05" value="0"
+              oninput="setSliderSpeed('trail-slider', this.value)">
+            <span class="speed-value" id="trail-slider-speed-val">0.00</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <div id="tip-overlay" aria-hidden="true">
+      <div class="tip-eyebrow" id="tip-eyebrow"></div>
+      <div class="tip-headline" id="tip-headline"></div>
+      <div id="tip-lower">
+        <div class="tip-lead" id="tip-lead"></div>
+        <div class="tip-note" id="tip-note"></div>
+      </div>
+    </div>
+
+    <script>
+      function toggleControls() {
+        const open = document.getElementById('controls-panel').classList.toggle('open');
+        document.getElementById('ctrl-btn').classList.toggle('active', open);
+        if (open) {
+          document.getElementById('info-panel').classList.remove('open');
+          document.getElementById('info-btn').classList.remove('active');
+          localStorage.setItem('fluid-sim-info-seen', '1');
+        }
+      }
+
+      function toggleInfo() {
+        const open = document.getElementById('info-panel').classList.toggle('open');
+        document.getElementById('info-btn').classList.toggle('active', open);
+        if (open) {
+          document.getElementById('controls-panel').classList.remove('open');
+          document.getElementById('ctrl-btn').classList.remove('active');
+          localStorage.setItem('fluid-sim-info-seen', '1');
+        }
+      }
+
+      function closeInfo() {
+        document.getElementById('info-panel').classList.remove('open');
+        document.getElementById('info-btn').classList.remove('active');
+        localStorage.setItem('fluid-sim-info-seen', '1');
+      }
+
+      // Auto-open info panel on first visit.
+      window.addEventListener('load', () => {
+        if (!localStorage.getItem('fluid-sim-info-seen')) {
+          document.getElementById('info-panel').classList.add('open');
+          document.getElementById('info-btn').classList.add('active');
+        }
+      });
+
+      // ── Slider defaults & section map ──────────────────────────────────────
+      const _sliderDefaults = {
+        'viscosity-slider': 0.00025,
+        'diffusion-slider': 0.03,
+        'force-slider':     10,
+        'maxmouse-slider':  10,
+        'hue-slider':       180,
+        'trail-slider':     40,
+      };
+
+      const _sectionSliders = {
+        physics:   ['viscosity-slider', 'diffusion-slider', 'force-slider', 'maxmouse-slider'],
+        particles: ['hue-slider', 'trail-slider'],
+      };
+
+      function resetSection(name) {
+        const ids = _sectionSliders[name];
+        if (!ids) return;
+        for (const id of ids) if (document.getElementById(id)) resetSlider(id);
+      }
+
+      function resetSlider(targetId) {
+        const def = _sliderDefaults[targetId];
+        if (def === undefined) return;
+        const slider = document.getElementById(targetId);
+        if (!slider) return;
+        slider.value = def;
+        _suppressTips = true;
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+        _suppressTips = false;
+        const speedSlider = document.getElementById(targetId + '-speed');
+        if (speedSlider) speedSlider.value = 0;
+        setSliderSpeed(targetId, 0);
+        _syncPlayingState();
+      }
+
+      // resetAll() is defined in sketch.js (resets JS globals); the controls call
+      // _syncControlsFromState() after to reflect the reset in the UI.
+
+      // ── Glassy parameter tips ──────────────────────────────────────────────
+      let tipsEnabled = localStorage.getItem('fluid-sim-tips') !== '0';
+      let _suppressTips = false;
+      let _tipTimer = null;
+
+      const _tipInfo = {
+        'viscosity-slider': {
+          eyebrow: 'Fluid physics', headline: 'Viscosity',
+          lead: 'Thickness of the fluid.',
+          note: 'Higher values damp velocity quickly — the fluid "forgets" its motion faster. At zero it flows freely.'
+        },
+        'diffusion-slider': {
+          eyebrow: 'Fluid physics', headline: 'Diffusion',
+          lead: 'How quickly velocity spreads to neighbours.',
+          note: 'High diffusion blurs the velocity field across the grid, making forces fan out in all directions instead of staying local.'
+        },
+        'force-slider': {
+          eyebrow: 'Fluid physics', headline: 'Force scale',
+          lead: 'Amplifies mouse strokes into fluid forces.',
+          note: 'Turn it up for dramatic swirls from small movements; turn it down for fine, controlled brushstrokes.'
+        },
+        'maxmouse-slider': {
+          eyebrow: 'Fluid physics', headline: 'Max velocity',
+          lead: 'Caps how fast raw mouse movement is sampled.',
+          note: 'Prevents a sudden fast swipe from injecting extreme velocity that destabilises the solver.'
+        },
+        'hue-slider': {
+          eyebrow: 'Particles', headline: 'Hue',
+          lead: 'Colour of the particle stream.',
+          note: 'Full saturation and brightness — sweep the hue to change from cyan to magenta to red to green and back.'
+        },
+        'trail-slider': {
+          eyebrow: 'Particles', headline: 'Trail fade',
+          lead: 'Controls how long particle trails persist.',
+          note: '<strong>Lower = longer trails.</strong> Each frame a semi-transparent rectangle fades the canvas toward black; this alpha controls how aggressively it erases the previous frame.'
+        },
+      };
+
+      // Build a glyph-shaped mask so the backdrop-filter frosts through the letters.
+      function _applyFrostMask() {
+        const el = document.getElementById('tip-headline');
+        if (!el) return;
+        const cs  = getComputedStyle(el);
+        const fs  = parseFloat(cs.fontSize) || 48;
+        const w   = Math.max(1, Math.ceil(el.clientWidth));
+        const h   = Math.max(1, Math.ceil(el.clientHeight));
+        const ff  = cs.fontFamily;
+        const ls  = cs.letterSpacing === 'normal' ? '0' : cs.letterSpacing;
+        const txt = el.textContent
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const svg =
+          "<svg xmlns='http://www.w3.org/2000/svg' width='" + w + "' height='" + h + "'>" +
+          "<text x='0' y='" + (h / 2).toFixed(1) + "' dominant-baseline='central' " +
+          "font-family='" + ff + "' font-size='" + fs + "px' font-weight='" + cs.fontWeight +
+          "' letter-spacing='" + ls + "' fill='black' stroke='black' stroke-width='3'>" + txt + "</text></svg>";
+        const uri = 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
+        el.style.webkitMaskImage = uri;
+        el.style.maskImage = uri;
+      }
+
+      function _showTip(id) {
+        if (!tipsEnabled || _suppressTips) return;
+        const info = _tipInfo[id];
+        if (!info) return;
+        if (typeof _sliderSpeeds !== 'undefined' && _sliderSpeeds[id]) return;
+        document.getElementById('tip-eyebrow').textContent  = info.eyebrow;
+        document.getElementById('tip-headline').textContent = info.headline;
+        document.getElementById('tip-lead').textContent     = info.lead;
+        document.getElementById('tip-note').innerHTML       = info.note;
+        _applyFrostMask();
+        const o = document.getElementById('tip-overlay');
+        o.classList.add('show');
+        clearTimeout(_tipTimer);
+        _tipTimer = setTimeout(() => o.classList.remove('show'), 2800);
+      }
+
+      function _syncTipsBtn() {
+        const b = document.getElementById('tips-btn');
+        if (b) b.classList.toggle('toggled-on', tipsEnabled);
+      }
+
+      function toggleTips() {
+        tipsEnabled = !tipsEnabled;
+        localStorage.setItem('fluid-sim-tips', tipsEnabled ? '1' : '0');
+        _syncTipsBtn();
+        if (!tipsEnabled) {
+          const o = document.getElementById('tip-overlay');
+          if (o) o.classList.remove('show');
+        }
+      }
+
+      window.addEventListener('load', () => {
+        _syncTipsBtn();
+        document.getElementById('controls-panel').addEventListener('input', e => {
+          const el = e.target.closest('input[type="range"]');
+          if (el) _showTip(el.id);
+        });
+      });
+
+      // ── Slider row highlight ───────────────────────────────────────────────
+      (function () {
+        const _hTimers = {};
+        function highlight(e) {
+          const group = e.target.closest('.slider-group');
+          if (!group) return;
+          const key = group.querySelector('input[type="range"]')?.id;
+          if (!key) return;
+          if (_hTimers[key]) clearTimeout(_hTimers[key]);
+          group.classList.add('highlighted');
+          _hTimers[key] = setTimeout(() => {
+            group.classList.remove('highlighted');
+            delete _hTimers[key];
+          }, 3000);
+        }
+        const panel = document.getElementById('controls-panel');
+        panel.addEventListener('mouseover', highlight);
+        panel.addEventListener('focusin',   highlight);
+        panel.addEventListener('input',     highlight);
+      })();
+
+      // ── Slider auto-cycling ────────────────────────────────────────────────
+      const _sliderSpeeds     = {};
+      const _sliderLastSpeeds = {};
+      const _sliderBounceDir  = {};
+      let _draggingSliderId   = null;
+
+      // Hue wraps; all others bounce at their slider bounds.
+      const _WRAP_IDS      = new Set(['hue-slider']);
+      const _OSCILLATE_IDS = new Set([
+        'viscosity-slider', 'diffusion-slider', 'force-slider',
+        'maxmouse-slider', 'trail-slider',
+      ]);
+
+      const _sliderDefaultSpeeds = {
+        'viscosity-slider': 0.00002,
+        'diffusion-slider': 0.001,
+        'force-slider':     0.5,
+        'maxmouse-slider':  0.5,
+        'hue-slider':       1.0,
+        'trail-slider':     0.5,
+      };
+
+      function _getOscBounds(id) {
+        const s = document.getElementById(id);
+        return s ? { lo: parseFloat(s.min), hi: parseFloat(s.max) } : { lo: 0, hi: 1 };
+      }
+
+      let _revealTimer = null;
+      function _syncPlayingState() {
+        const anyPlaying = Object.values(_sliderSpeeds).some(s => s !== 0);
+        const panel = document.getElementById('controls-panel');
+        panel.classList.toggle('auto-playing', anyPlaying);
+        if (!anyPlaying) panel.classList.remove('revealed');
+        const btn = document.getElementById('pause-all-btn');
+        if (btn) btn.textContent = anyPlaying ? '⏸ Pause all' : '▶ Play all';
+      }
+
+      function pauseAll() {
+        for (const id of Object.keys(_sliderSpeeds)) {
+          if (!_sliderSpeeds[id]) continue;
+          const sp = document.getElementById(id + '-speed');
+          if (sp) sp.value = 0;
+          setSliderSpeed(id, 0);
+        }
+        _syncPlayingState();
+      }
+
+      function resumeAll() {
+        for (const id of Object.keys(_sliderDefaultSpeeds)) {
+          const speed = _sliderLastSpeeds[id] ?? _sliderDefaultSpeeds[id];
+          const sp = document.getElementById(id + '-speed');
+          if (sp) sp.value = speed;
+          setSliderSpeed(id, speed);
+        }
+        _syncPlayingState();
+      }
+
+      function toggleAllPlay() {
+        const anyPlaying = Object.values(_sliderSpeeds).some(s => s !== 0);
+        if (anyPlaying) pauseAll(); else resumeAll();
+      }
+
+      // Tap in the overlay while dimmed → reveal for 3 s on mobile.
+      document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('overlay').addEventListener('pointerdown', e => {
+          const panel = document.getElementById('controls-panel');
+          if (!panel.classList.contains('auto-playing')) return;
+          if (panel.classList.contains('revealed')) return;
+          if (e.target.closest('.speed-play-btn, .reset-btn')) {
+            e.stopPropagation(); e.preventDefault();
+          }
+          panel.classList.add('revealed');
+          clearTimeout(_revealTimer);
+          _revealTimer = setTimeout(() => panel.classList.remove('revealed'), 3000);
+        }, { passive: false, capture: true });
+      });
+
+      function toggleSliderSpeed(targetId) {
+        const current = _sliderSpeeds[targetId] || 0;
+        const newSpeed = current !== 0 ? 0
+          : (_sliderLastSpeeds[targetId] ?? _sliderDefaultSpeeds[targetId] ?? 0.01);
+        const sp = document.getElementById(targetId + '-speed');
+        if (sp) sp.value = newSpeed;
+        setSliderSpeed(targetId, newSpeed);
+        _syncPlayingState();
+      }
+
+      function setSliderSpeed(targetId, speedVal) {
+        const speed = parseFloat(speedVal) || 0;
+        _sliderSpeeds[targetId] = speed;
+        if (speed !== 0) _sliderLastSpeeds[targetId] = speed;
+        const sp  = document.getElementById(targetId + '-speed');
+        const vel = document.getElementById(targetId + '-speed-val');
+        if (vel && sp) {
+          const step = parseFloat(sp.step) || 0;
+          const dec  = (step > 0 && step < 1) ? Math.min(6, Math.ceil(-Math.log10(step))) : 0;
+          vel.textContent = speed.toFixed(dec);
+        }
+        const btn = document.getElementById(targetId + '-play-btn');
+        if (btn) btn.textContent = speed !== 0 ? '⏸' : '▶';
+        const group = sp ? sp.closest('.slider-group') : null;
+        if (group) group.classList.toggle('has-speed', speed !== 0);
+      }
+
+      const _cyclePos = {};
+      const _snap = (v, min, step) => (step > 0 ? min + Math.round((v - min) / step) * step : v);
+
+      function _advanceSliders() {
+        for (const id in _sliderSpeeds) {
+          const speed = _sliderSpeeds[id];
+          if (!speed || id === _draggingSliderId) { delete _cyclePos[id]; continue; }
+          const slider = document.getElementById(id);
+          if (!slider) continue;
+          const min  = parseFloat(slider.min);
+          const max  = parseFloat(slider.max);
+          const step = parseFloat(slider.step) || 0;
+          const span = max - min;
+          if (span <= 0) continue;
+          const cur = parseFloat(slider.value);
+          let v = _cyclePos[id];
+          if (v === undefined || Math.abs(cur - _snap(v, min, step)) > (step || 0) * 1.5) v = cur;
+
+          if (_OSCILLATE_IDS.has(id)) {
+            const ob  = _getOscBounds(id);
+            const lo  = Math.max(min, ob.lo), hi = Math.min(max, ob.hi);
+            if (_sliderBounceDir[id] === undefined) _sliderBounceDir[id] = 1;
+            const prevDir = _sliderBounceDir[id];
+            let dir = prevDir;
+            v += Math.abs(speed) * dir;
+            if (v > hi) { v = 2 * hi - v; dir = -1; }
+            else if (v < lo) { v = 2 * lo - v; dir = 1; }
+            v = Math.max(lo, Math.min(hi, v));
+            _sliderBounceDir[id] = dir;
+            if (dir !== prevDir && !slider.classList.contains('anim-hit-hi') && !slider.classList.contains('anim-hit-lo')) {
+              const cls = dir === -1 ? 'anim-hit-hi' : 'anim-hit-lo';
+              slider.classList.add(cls);
+              slider.addEventListener('animationend', () => slider.classList.remove(cls), { once: true });
+            }
+          } else {
+            // Wrap (hue slider)
+            v += speed;
+            const wrapped = v > max || v < min;
+            if (v > max)      v = min + ((v - min) % span);
+            else if (v < min) v = max - ((min - v) % span);
+            if (wrapped && !slider.classList.contains('anim-wrap')) {
+              slider.classList.add('anim-wrap');
+              slider.addEventListener('animationend', () => slider.classList.remove('anim-wrap'), { once: true });
+            }
+          }
+          _cyclePos[id] = v;
+          slider.value = _snap(v, min, step);
+          slider.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+
+      (function _cycleLoop() {
+        _advanceSliders();
+        requestAnimationFrame(_cycleLoop);
+      })();
+
+      // ── Slider drag handling (delta-based, no position jump on click) ──────
+      (function () {
+        const panel = () => document.getElementById('controls-panel');
+        let _slider = null, _pointerId = null, _startValue = 0, _startClientX = 0, _prevClientX = 0;
+
+        function setFromDelta(slider, deltaX, incremental) {
+          const rect = slider.getBoundingClientRect();
+          if (rect.width <= 0) return;
+          const min  = parseFloat(slider.min);
+          const max  = parseFloat(slider.max);
+          const step = parseFloat(slider.step) || 0;
+          const span = max - min;
+          let v = incremental
+            ? (parseFloat(slider.value) || 0) + (deltaX / rect.width) * span
+            : _startValue + (deltaX / rect.width) * span;
+          if (step > 0) v = min + Math.round((v - min) / step) * step;
+          if (_WRAP_IDS.has(slider.id)) {
+            v = min + ((v - min) % span + span) % span;
+          } else {
+            v = Math.max(min, Math.min(max, v));
+          }
+          const dec = (step > 0 && step < 1) ? Math.min(6, Math.ceil(-Math.log10(step))) : 0;
+          const str = dec > 0 ? v.toFixed(dec) : String(Math.round(v));
+          if (slider.value !== str) {
+            slider.value = str;
+            slider.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }
+
+        function endDrag() {
+          if (_slider && _pointerId != null) {
+            try { _slider.releasePointerCapture(_pointerId); } catch (_) {}
+          }
+          _slider = null; _pointerId = null; _draggingSliderId = null;
+          const p = panel(); if (p) p.classList.remove('dragging');
+          const hud = document.getElementById('hud'); if (hud) hud.classList.remove('dragging');
+        }
+
+        document.addEventListener('pointerdown', e => {
+          const t = e.target;
+          let slider;
+          if (t instanceof HTMLInputElement && t.type === 'range') {
+            slider = t;
+          } else if (t.closest('.ctrl-label') || t.closest('.ctrl-value')) {
+            const row = t.closest('.ctrl-row');
+            slider = row && row.querySelector('input[type="range"]');
+          }
+          if (!slider || !slider.closest('#controls-panel')) return;
+          _slider = slider; _pointerId = e.pointerId;
+          _startValue = parseFloat(slider.value) || 0;
+          _startClientX = e.clientX; _prevClientX = e.clientX;
+          _draggingSliderId = slider.id;
+          panel().classList.add('dragging');
+          const hud = document.getElementById('hud'); if (hud) hud.classList.add('dragging');
+          try { slider.setPointerCapture(e.pointerId); } catch (_) {}
+          e.preventDefault();
+        });
+
+        document.addEventListener('pointermove', e => {
+          if (_slider && e.pointerId === _pointerId) {
+            if (_WRAP_IDS.has(_slider.id)) {
+              setFromDelta(_slider, e.clientX - _prevClientX, true);
+              _prevClientX = e.clientX;
+            } else {
+              setFromDelta(_slider, e.clientX - _startClientX, false);
+            }
+            e.preventDefault();
+          }
+        });
+
+        ['pointerup', 'pointercancel'].forEach(ev =>
+          document.addEventListener(ev, e => { if (_slider && e.pointerId === _pointerId) endDrag(); })
+        );
+      })();
+
+      // ── Play/reset button drag guard ───────────────────────────────────────
+      (function () {
+        let _ptrId = null, _startX, _startY, _moved = false;
+        document.addEventListener('pointerdown', e => {
+          if (!e.target.closest('.speed-play-btn, .reset-btn')) return;
+          if (!e.target.closest('#controls-panel')) return;
+          _ptrId = e.pointerId; _startX = e.clientX; _startY = e.clientY; _moved = false;
+        });
+        document.addEventListener('pointermove', e => {
+          if (e.pointerId !== _ptrId) return;
+          const dx = e.clientX - _startX, dy = e.clientY - _startY;
+          if (dx * dx + dy * dy > 64) _moved = true;
+        });
+        ['pointerup', 'pointercancel'].forEach(ev =>
+          document.addEventListener(ev, e => { if (e.pointerId === _ptrId) _ptrId = null; })
+        );
+        document.getElementById('controls-panel').addEventListener('click', e => {
+          if (_moved && e.target.closest('.speed-play-btn, .reset-btn')) {
+            e.stopImmediatePropagation(); e.preventDefault(); _moved = false;
+          }
+        }, true);
+      })();
+
+      // ── Screenshot export ──────────────────────────────────────────────────
+      function exportScreenshot() {
+        showToast('Saving PNG…');
+        try {
+          const p5canvas =
+            document.getElementById('defaultCanvas0') ||
+            document.querySelector('body > canvas');
+          if (!p5canvas) { showToast('PNG failed: no canvas'); return; }
+
+          const SIM_SIZE = 720, PANEL_W = 380;
+          const H = SIM_SIZE, W = SIM_SIZE + PANEL_W;
+          const out = document.createElement('canvas');
+          out.width = W; out.height = H;
+          const ctx = out.getContext('2d');
+
+          ctx.fillStyle = '#000';
+          ctx.fillRect(0, 0, W, H);
+
+          const sw = p5canvas.width, sh = p5canvas.height;
+          const scale = Math.min(SIM_SIZE / sw, SIM_SIZE / sh);
+          const dw = sw * scale, dh = sh * scale;
+          ctx.drawImage(p5canvas, (SIM_SIZE - dw) / 2, (H - dh) / 2, dw, dh);
+
+          _drawSettingsPanel(ctx, SIM_SIZE, 0, PANEL_W, H);
+
+          const trigger = url => {
+            const a = document.createElement('a');
+            a.href = url; a.download = `fluid-simulation-${Date.now()}.png`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          };
+
+          if (out.toBlob) {
+            out.toBlob(blob => {
+              if (!blob) { showToast('PNG save failed'); return; }
+              const url = URL.createObjectURL(blob);
+              trigger(url);
+              setTimeout(() => URL.revokeObjectURL(url), 2000);
+              showToast('PNG saved');
+            }, 'image/png');
+          } else {
+            trigger(out.toDataURL('image/png'));
+            showToast('PNG saved');
+          }
+        } catch (err) {
+          showToast('PNG failed: ' + err.message);
+        }
+      }
+
+      function _drawSettingsPanel(ctx, x, y, w, h) {
+        ctx.fillStyle = '#0d1117';
+        ctx.fillRect(x, y, w, h);
+        ctx.fillStyle = '#58a6ff';
+        ctx.fillRect(x, y, w, 4);
+
+        const px   = x + Math.round(w * 0.08);
+        const valX = x + Math.round(w * 0.55);
+        const lH   = 28;
+        let cy = y + 52;
+
+        ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillStyle = '#e6edf3';
+        ctx.fillText('Fluid Simulation', px, cy);
+        cy += 12;
+        ctx.fillStyle = '#30363d';
+        ctx.fillRect(px, cy, w - (px - x) * 2, 1);
+        cy += 20;
+
+        function row(label, value) {
+          ctx.font = '14px monospace';
+          ctx.fillStyle = '#6e7681'; ctx.fillText(label, px,   cy);
+          ctx.fillStyle = '#58a6ff'; ctx.fillText(value, valX, cy);
+          cy += lH;
+        }
+
+        if (typeof fluidViscosity      !== 'undefined') row('viscosity',  fluidViscosity.toFixed(5));
+        if (typeof fluidDiffusion      !== 'undefined') row('diffusion',  fluidDiffusion.toFixed(3));
+        if (typeof velocityScaleFactor !== 'undefined') row('force scale', velocityScaleFactor.toFixed(0));
+        if (typeof maxMouseVelocity    !== 'undefined') row('max mouse',  maxMouseVelocity.toFixed(0));
+        if (typeof particleHue         !== 'undefined') row('hue',        particleHue.toFixed(0) + '°');
+        if (typeof trailOpacity        !== 'undefined') row('trail fade', trailOpacity.toFixed(0));
+
+        try {
+          ctx.font = '11px monospace';
+          ctx.fillStyle = '#6e7681';
+          const link  = _shareUrl();
+          const maxW  = w - (px - x) * 2;
+          const lines = _wrapText(ctx, link, maxW);
+          let fy = y + h - 18 - Math.max(0, (lines.length - 1)) * 15;
+          ctx.fillText('share link:', px, fy - 16);
+          ctx.fillStyle = '#8b949e';
+          for (const ln of lines) { ctx.fillText(ln, px, fy); fy += 15; }
+        } catch (_) {}
+      }
+
+      function _wrapText(ctx, text, maxW) {
+        const out = []; let buf = '';
+        for (let i = 0; i < text.length; i++) {
+          const ch = text[i];
+          if (ctx.measureText(buf + ch).width > maxW) { out.push(buf); buf = ch; }
+          else buf += ch;
+        }
+        if (buf) out.push(buf);
+        return out;
+      }
+
+      // ── Share link ─────────────────────────────────────────────────────────
+      function _encodeSpeedParams() {
+        const keys = {
+          'viscosity-slider': 'sp_v', 'diffusion-slider': 'sp_d',
+          'force-slider': 'sp_f', 'maxmouse-slider': 'sp_m',
+          'hue-slider': 'sp_h', 'trail-slider': 'sp_t',
+        };
+        return Object.entries(keys)
+          .filter(([id]) => _sliderSpeeds[id])
+          .map(([id, k]) => `${k}=${_sliderSpeeds[id]}`)
+          .join('&');
+      }
+
+      function _applySpeedsFromHash() {
+        const keys = {
+          'sp_v': 'viscosity-slider', 'sp_d': 'diffusion-slider',
+          'sp_f': 'force-slider',     'sp_m': 'maxmouse-slider',
+          'sp_h': 'hue-slider',       'sp_t': 'trail-slider',
+        };
+        const hash = location.hash.startsWith('#') ? location.hash.slice(1) : location.hash;
+        const params = {};
+        for (const kv of hash.split('&')) {
+          const i = kv.indexOf('='); if (i < 0) continue;
+          params[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1));
+        }
+        let anySet = false;
+        for (const [k, id] of Object.entries(keys)) {
+          if (!(k in params)) continue;
+          const speed = parseFloat(params[k]);
+          if (!Number.isFinite(speed) || speed === 0) continue;
+          const sp = document.getElementById(id + '-speed');
+          if (sp) sp.value = speed;
+          setSliderSpeed(id, speed);
+          anySet = true;
+        }
+        if (anySet) _syncPlayingState();
+      }
+
+      function _buildHash() {
+        const hash   = encodeSettings();
+        const speeds = _encodeSpeedParams();
+        return speeds ? hash + '&' + speeds : hash;
+      }
+
+      function _shareUrl() {
+        return location.origin + location.pathname + '#' + _buildHash();
+      }
+
+      function copyShareLink() {
+        showToast('Copying link…');
+        let url;
+        try {
+          url = _shareUrl();
+          try { history.replaceState(null, '', '#' + _buildHash()); } catch (_) {}
+        } catch (err) { showToast('Share failed: ' + err.message); return; }
+
+        const finish = ok =>
+          showToast(ok ? 'Link copied to clipboard' : 'Copy blocked — link is in the address bar');
+
+        if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+          navigator.clipboard.writeText(url).then(
+            () => finish(true),
+            () => _fallbackCopy(url, finish)
+          );
+        } else {
+          _fallbackCopy(url, finish);
+        }
+      }
+
+      function _fallbackCopy(text, cb) {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta); cb(ok);
+        } catch (e) { cb(false); }
+      }
+
+      let _toastTimer = null;
+      function showToast(msg) {
+        const el = document.getElementById('toast');
+        if (!el) return;
+        el.textContent = msg; el.classList.add('show');
+        clearTimeout(_toastTimer);
+        _toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+      }
+
+      // ── Sync UI sliders from JS state (called after hash load / reset) ─────
+      function _syncControlsFromState() {
+        const setSlider = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        const setLabel  = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+        if (typeof fluidViscosity !== 'undefined') {
+          setSlider('viscosity-slider', fluidViscosity);
+          setLabel ('viscosity-val',    fluidViscosity.toFixed(5));
+        }
+        if (typeof fluidDiffusion !== 'undefined') {
+          setSlider('diffusion-slider', fluidDiffusion);
+          setLabel ('diffusion-val',    fluidDiffusion.toFixed(3));
+        }
+        if (typeof velocityScaleFactor !== 'undefined') {
+          setSlider('force-slider', velocityScaleFactor);
+          setLabel ('force-val',    velocityScaleFactor.toFixed(0));
+        }
+        if (typeof maxMouseVelocity !== 'undefined') {
+          setSlider('maxmouse-slider', maxMouseVelocity);
+          setLabel ('maxmouse-val',    maxMouseVelocity.toFixed(0));
+        }
+        if (typeof particleHue !== 'undefined') {
+          setSlider('hue-slider', particleHue);
+          setLabel ('hue-val',    particleHue.toFixed(0) + '°');
+        }
+        if (typeof trailOpacity !== 'undefined') {
+          setSlider('trail-slider', trailOpacity);
+          setLabel ('trail-val',    trailOpacity.toFixed(0));
+        }
+      }
+
+      window.addEventListener('load', () => {
+        setTimeout(_syncControlsFromState, 0);
+        setTimeout(_applySpeedsFromHash,   50);
+      });
+    </script>
+  </body>
+</html>
