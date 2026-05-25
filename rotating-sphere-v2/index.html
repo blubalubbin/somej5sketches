@@ -43,6 +43,9 @@
       }
 
       .ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
+      .ctrl-heading.section-heading {
+        display: flex; align-items: center; gap: 0.6rem;
+      }
 
       /* ── slider group: main row + collapsible speed sub-row ── */
       .slider-group {
@@ -404,63 +407,133 @@
           <div style="flex:1"></div>
           <button class="speed-play-btn" id="pause-all-btn" onclick="toggleAllPlay()">&#9654; Play all</button>
         </div>
-        <div class="slider-group">
-          <div class="ctrl-row">
-            <button class="reset-btn" onclick="resetSlider('rot-offset-slider')">&#8634;</button>
-            <span class="ctrl-label">Rotation</span>
-            <input id="rot-offset-slider" type="range" min="0" max="360" step="1" value="0"
-              oninput="setRotOffset(+this.value * Math.PI / 180);
-                       document.getElementById('rot-offset-val').textContent=(+this.value).toFixed(0)+'°'">
-            <span class="ctrl-value" id="rot-offset-val">0°</span>
-            <button class="speed-play-btn" id="rot-offset-slider-play-btn" onclick="toggleSliderSpeed('rot-offset-slider')">▶</button>
+        <div class="ctrl-heading section-heading">
+          <span>Rotation</span>
+          <button class="reset-btn" onclick="resetSection('rotation')" title="Reset rotation">&#8634;</button>
+          <div style="flex:1"></div>
+          <button class="speed-play-btn" id="rot-mode-btn" onclick="toggleRotMode()">RGB axes</button>
+        </div>
+
+        <!-- Axis-angle mode: one rotation about the θ/φ axis. -->
+        <div id="rot-axis-mode">
+          <div class="slider-group">
+            <div class="ctrl-row">
+              <button class="reset-btn" onclick="resetSlider('rot-offset-slider')">&#8634;</button>
+              <span class="ctrl-label">Rotation</span>
+              <input id="rot-offset-slider" type="range" min="0" max="360" step="1" value="0"
+                oninput="setRotOffset(+this.value * Math.PI / 180);
+                         document.getElementById('rot-offset-val').textContent=(+this.value).toFixed(0)+'°'">
+              <span class="ctrl-value" id="rot-offset-val">0°</span>
+              <button class="speed-play-btn" id="rot-offset-slider-play-btn" onclick="toggleSliderSpeed('rot-offset-slider')">▶</button>
+            </div>
+            <div class="speed-row">
+              <span class="speed-label">↻ speed</span>
+              <input id="rot-offset-slider-speed" type="range" min="-10" max="10" step="0.1" value="0"
+                oninput="setSliderSpeed('rot-offset-slider', this.value)">
+              <span class="speed-value" id="rot-offset-slider-speed-val">0.0</span>
+            </div>
           </div>
-          <div class="speed-row">
-            <span class="speed-label">↻ speed</span>
-            <input id="rot-offset-slider-speed" type="range" min="-10" max="10" step="0.1" value="0"
-              oninput="setSliderSpeed('rot-offset-slider', this.value)">
-            <span class="speed-value" id="rot-offset-slider-speed-val">0.0</span>
+
+          <div class="ctrl-heading">Rotation axis</div>
+
+          <div class="slider-group">
+            <div class="ctrl-row">
+              <button class="reset-btn" onclick="resetSlider('theta-slider')">&#8634;</button>
+              <span class="ctrl-label">Polar (&#952;)</span>
+              <input id="theta-slider" type="range" min="-180" max="180" step="0.1" value="54.7"
+                oninput="setAxisTheta(this.value);
+                         document.getElementById('theta-val').textContent=(+this.value).toFixed(1)+'°'">
+              <span class="ctrl-value" id="theta-val">54.7°</span>
+              <button class="speed-play-btn" id="theta-slider-play-btn" onclick="toggleSliderSpeed('theta-slider')">▶</button>
+            </div>
+            <div class="speed-row">
+              <span class="speed-label">↻ speed</span>
+              <input id="theta-slider-speed" type="range" min="-2" max="2" step="0.05" value="0"
+                oninput="setSliderSpeed('theta-slider', this.value)">
+              <span class="speed-value" id="theta-slider-speed-val">0.00</span>
+            </div>
+          </div>
+
+          <div class="slider-group">
+            <div class="ctrl-row">
+              <button class="reset-btn" onclick="resetSlider('phi-slider')">&#8634;</button>
+              <span class="ctrl-label">Azimuth (&#966;)</span>
+              <input id="phi-slider" type="range" min="0" max="360" step="0.1" value="45.0"
+                oninput="setAxisPhi(this.value);
+                         document.getElementById('phi-val').textContent=(+this.value).toFixed(1)+'°'">
+              <span class="ctrl-value" id="phi-val">45.0°</span>
+              <button class="speed-play-btn" id="phi-slider-play-btn" onclick="toggleSliderSpeed('phi-slider')">▶</button>
+            </div>
+            <div class="speed-row">
+              <span class="speed-label">↻ speed</span>
+              <input id="phi-slider-speed" type="range" min="-3" max="3" step="0.05" value="0"
+                oninput="setSliderSpeed('phi-slider', this.value)">
+              <span class="speed-value" id="phi-slider-speed-val">0.00</span>
+            </div>
           </div>
         </div>
 
-        <div class="ctrl-heading">Rotation axis</div>
-
-        <div class="slider-group">
-          <div class="ctrl-row">
-            <button class="reset-btn" onclick="resetSlider('theta-slider')">&#8634;</button>
-            <span class="ctrl-label">Polar (&#952;)</span>
-            <input id="theta-slider" type="range" min="-180" max="180" step="0.1" value="54.7"
-              oninput="setAxisTheta(this.value);
-                       document.getElementById('theta-val').textContent=(+this.value).toFixed(1)+'°'">
-            <span class="ctrl-value" id="theta-val">54.7°</span>
-            <button class="speed-play-btn" id="theta-slider-play-btn" onclick="toggleSliderSpeed('theta-slider')">▶</button>
+        <!-- RGB-axis mode: three Euler rotations about the R/G/B colour axes. -->
+        <div id="rot-rgb-mode" style="display:none;">
+          <div class="slider-group">
+            <div class="ctrl-row">
+              <button class="reset-btn" onclick="resetSlider('rotr-slider')">&#8634;</button>
+              <span class="ctrl-label" style="color:#f87;">Rotate R</span>
+              <input id="rotr-slider" type="range" min="0" max="360" step="1" value="0"
+                oninput="setRotR(+this.value);
+                         document.getElementById('rotr-val').textContent=(+this.value).toFixed(0)+'°'">
+              <span class="ctrl-value" id="rotr-val">0°</span>
+              <button class="speed-play-btn" id="rotr-slider-play-btn" onclick="toggleSliderSpeed('rotr-slider')">▶</button>
+            </div>
+            <div class="speed-row">
+              <span class="speed-label">↻ speed</span>
+              <input id="rotr-slider-speed" type="range" min="-10" max="10" step="0.1" value="0"
+                oninput="setSliderSpeed('rotr-slider', this.value)">
+              <span class="speed-value" id="rotr-slider-speed-val">0.0</span>
+            </div>
           </div>
-          <div class="speed-row">
-            <span class="speed-label">↻ speed</span>
-            <input id="theta-slider-speed" type="range" min="-2" max="2" step="0.05" value="0"
-              oninput="setSliderSpeed('theta-slider', this.value)">
-            <span class="speed-value" id="theta-slider-speed-val">0.00</span>
+
+          <div class="slider-group">
+            <div class="ctrl-row">
+              <button class="reset-btn" onclick="resetSlider('rotg-slider')">&#8634;</button>
+              <span class="ctrl-label" style="color:#8d8;">Rotate G</span>
+              <input id="rotg-slider" type="range" min="0" max="360" step="1" value="0"
+                oninput="setRotG(+this.value);
+                         document.getElementById('rotg-val').textContent=(+this.value).toFixed(0)+'°'">
+              <span class="ctrl-value" id="rotg-val">0°</span>
+              <button class="speed-play-btn" id="rotg-slider-play-btn" onclick="toggleSliderSpeed('rotg-slider')">▶</button>
+            </div>
+            <div class="speed-row">
+              <span class="speed-label">↻ speed</span>
+              <input id="rotg-slider-speed" type="range" min="-10" max="10" step="0.1" value="0"
+                oninput="setSliderSpeed('rotg-slider', this.value)">
+              <span class="speed-value" id="rotg-slider-speed-val">0.0</span>
+            </div>
+          </div>
+
+          <div class="slider-group">
+            <div class="ctrl-row">
+              <button class="reset-btn" onclick="resetSlider('rotb-slider')">&#8634;</button>
+              <span class="ctrl-label" style="color:#7cf;">Rotate B</span>
+              <input id="rotb-slider" type="range" min="0" max="360" step="1" value="0"
+                oninput="setRotB(+this.value);
+                         document.getElementById('rotb-val').textContent=(+this.value).toFixed(0)+'°'">
+              <span class="ctrl-value" id="rotb-val">0°</span>
+              <button class="speed-play-btn" id="rotb-slider-play-btn" onclick="toggleSliderSpeed('rotb-slider')">▶</button>
+            </div>
+            <div class="speed-row">
+              <span class="speed-label">↻ speed</span>
+              <input id="rotb-slider-speed" type="range" min="-10" max="10" step="0.1" value="0"
+                oninput="setSliderSpeed('rotb-slider', this.value)">
+              <span class="speed-value" id="rotb-slider-speed-val">0.0</span>
+            </div>
           </div>
         </div>
 
-        <div class="slider-group">
-          <div class="ctrl-row">
-            <button class="reset-btn" onclick="resetSlider('phi-slider')">&#8634;</button>
-            <span class="ctrl-label">Azimuth (&#966;)</span>
-            <input id="phi-slider" type="range" min="0" max="360" step="0.1" value="45.0"
-              oninput="setAxisPhi(this.value);
-                       document.getElementById('phi-val').textContent=(+this.value).toFixed(1)+'°'">
-            <span class="ctrl-value" id="phi-val">45.0°</span>
-            <button class="speed-play-btn" id="phi-slider-play-btn" onclick="toggleSliderSpeed('phi-slider')">▶</button>
-          </div>
-          <div class="speed-row">
-            <span class="speed-label">↻ speed</span>
-            <input id="phi-slider-speed" type="range" min="-3" max="3" step="0.05" value="0"
-              oninput="setSliderSpeed('phi-slider', this.value)">
-            <span class="speed-value" id="phi-slider-speed-val">0.00</span>
-          </div>
+        <div class="ctrl-heading section-heading" style="margin-top:1rem;">
+          <span>Colour warp  <span style="font-weight:400;color:#666;font-size:0.85rem;">(applied before normalise)</span></span>
+          <button class="reset-btn" onclick="resetSection('warp')" title="Reset colour warp">&#8634;</button>
         </div>
-
-        <div class="ctrl-heading" style="margin-top:1rem;">Colour warp  <span style="font-weight:400;color:#666;font-size:0.85rem;">(applied before normalise)</span></div>
 
         <div class="slider-group">
           <div class="ctrl-row">
@@ -524,7 +597,10 @@
           </div>
         </div>
 
-        <div class="ctrl-heading" style="margin-top:1rem;">Coordinate centre  <span style="font-weight:400;color:#666;font-size:0.85rem;">(shift origin before warp)</span></div>
+        <div class="ctrl-heading section-heading" style="margin-top:1rem;">
+          <span>Coordinate centre  <span style="font-weight:400;color:#666;font-size:0.85rem;">(shift origin before warp)</span></span>
+          <button class="reset-btn" onclick="resetSection('centre')" title="Reset coordinate centre">&#8634;</button>
+        </div>
 
         <div class="slider-group">
           <div class="ctrl-row">
@@ -659,12 +735,29 @@
         'theta-slider':      54.7,
         'phi-slider':        45.0,
         'rot-offset-slider': 0,
+        'rotr-slider':       0,
+        'rotg-slider':       0,
+        'rotb-slider':       0,
         'exp-slider':        0,
         'expimag-slider':    0,
         'cx-slider':         0,
         'cy-slider':         0,
         'cz-slider':         0,
       };
+
+      // Section → slider IDs, for the per-section reset buttons. The rotation
+      // section spans both modes; hidden sliders reset harmlessly.
+      const _sectionSliders = {
+        rotation: ['rot-offset-slider', 'theta-slider', 'phi-slider', 'rotr-slider', 'rotg-slider', 'rotb-slider'],
+        warp:     ['exp-slider', 'expimag-slider'],
+        centre:   ['cx-slider', 'cy-slider', 'cz-slider'],
+      };
+
+      function resetSection(name) {
+        const ids = _sectionSliders[name];
+        if (!ids) return;
+        for (const id of ids) if (document.getElementById(id)) resetSlider(id);
+      }
 
       function resetSlider(targetId) {
         const def = _sliderDefaults[targetId];
@@ -689,6 +782,36 @@
 
       function resetAll() {
         for (const id of Object.keys(_sliderDefaults)) resetSlider(id);
+        if (typeof setRotMode === 'function') setRotMode('axis');
+        _applyRotModeUI();
+      }
+
+      // ── Rotation mode toggle (axis-angle ↔ three RGB-axis rotations) ─────
+      function _applyRotModeUI() {
+        const rgb = (typeof rotMode !== 'undefined' && rotMode === 'rgb');
+        const axisEl = document.getElementById('rot-axis-mode');
+        const rgbEl  = document.getElementById('rot-rgb-mode');
+        if (axisEl) axisEl.style.display = rgb ? 'none' : '';
+        if (rgbEl)  rgbEl.style.display  = rgb ? '' : 'none';
+        const btn = document.getElementById('rot-mode-btn');
+        if (btn) btn.textContent = rgb ? 'Axis + angle' : 'RGB axes';
+      }
+
+      function toggleRotMode() {
+        const toRgb = !(typeof rotMode !== 'undefined' && rotMode === 'rgb');
+        // Stop any auto-cycling on the sliders we're hiding so they don't keep
+        // mutating state (and pinning the overlay open) while invisible.
+        const leaving = toRgb
+          ? ['rot-offset-slider', 'theta-slider', 'phi-slider']
+          : ['rotr-slider', 'rotg-slider', 'rotb-slider'];
+        for (const id of leaving) {
+          const sp = document.getElementById(id + '-speed');
+          if (sp) sp.value = 0;
+          setSliderSpeed(id, 0);
+        }
+        if (typeof setRotMode === 'function') setRotMode(toRgb ? 'rgb' : 'axis');
+        _applyRotModeUI();
+        _syncPlayingState();
       }
 
       // Toggle the RGB-space overlay between individual dots and a filled surface.
@@ -715,6 +838,21 @@
           eyebrow: 'Rotation', headline: 'Spin',
           lead: 'Turns the whole shape about its axis.',
           note: 'Every surface colour rotates together — each point’s hue is its <strong>direction</strong> after the spin.'
+        },
+        'rotr-slider': {
+          eyebrow: 'Rotation', headline: 'Rotate R',
+          lead: 'Spins the shape about the red (X) axis.',
+          note: 'One of three independent turns — combine R, G and B to orient the shape any way in colour space.'
+        },
+        'rotg-slider': {
+          eyebrow: 'Rotation', headline: 'Rotate G',
+          lead: 'Spins the shape about the green (Y) axis.',
+          note: 'One of three independent turns — combine R, G and B to orient the shape any way in colour space.'
+        },
+        'rotb-slider': {
+          eyebrow: 'Rotation', headline: 'Rotate B',
+          lead: 'Spins the shape about the blue (Z) axis.',
+          note: 'One of three independent turns — combine R, G and B to orient the shape any way in colour space.'
         },
         'theta-slider': {
           eyebrow: 'Rotation axis', headline: 'Polar θ',
@@ -839,7 +977,7 @@
       // and stays visible whenever speed is non-zero so it's easy to find.
       const _sliderSpeeds = {};
       // Sliders that wrap (loop) at boundaries.
-      const _WRAP_IDS = new Set(['rot-offset-slider', 'theta-slider', 'phi-slider']);
+      const _WRAP_IDS = new Set(['rot-offset-slider', 'theta-slider', 'phi-slider', 'rotr-slider', 'rotg-slider', 'rotb-slider']);
       // Sliders that oscillate (bounce) at boundaries rather than wrapping.
       const _OSCILLATE_IDS = new Set(['exp-slider', 'expimag-slider', 'cx-slider', 'cy-slider', 'cz-slider']);
       // Per-slider direction multiplier for oscillation (+1 or -1).
@@ -853,6 +991,9 @@
         'theta-slider':      0.5,
         'phi-slider':        0.75,
         'rot-offset-slider': 3,
+        'rotr-slider':       1.5,
+        'rotg-slider':       1.5,
+        'rotb-slider':       1.5,
         'exp-slider':        0.03,
         'expimag-slider':    0.006,
         'cx-slider':         0.012,
@@ -915,7 +1056,13 @@
       }
 
       function resumeAll() {
+        const rgb = (typeof rotMode !== 'undefined' && rotMode === 'rgb');
+        // Don't auto-cycle the rotation sliders belonging to the hidden mode.
+        const hidden = rgb
+          ? new Set(['rot-offset-slider', 'theta-slider', 'phi-slider'])
+          : new Set(['rotr-slider', 'rotg-slider', 'rotb-slider']);
         for (const id of Object.keys(_sliderDefaultSpeeds)) {
+          if (hidden.has(id)) continue;
           const speed = _sliderLastSpeeds[id] ?? _sliderDefaultSpeeds[id];
           const speedSlider = document.getElementById(id + '-speed');
           if (speedSlider) speedSlider.value = speed;
@@ -1217,25 +1364,31 @@
         }, true);
       })();
 
-      // ── Canvas drag → rotation offset slider ────────────────────────────
+      // ── Canvas drag → rotation slider ───────────────────────────────────
       // Dragging anywhere on the canvas (i.e. outside the overlay) shifts the
-      // rotOffset slider. Horizontal motion across the full window width maps
-      // to 8 full rotations (2880°).
+      // active rotation slider — rotation offset in axis mode, Rotate B in RGB
+      // mode. Horizontal motion across the full window width maps to 8 full
+      // rotations (2880°).
       (function () {
         let _active = false;
         let _startX = 0;
         let _startOffset = 0;
         let _pid = null;
+        let _targetId = 'rot-offset-slider';
 
         const isInOverlay = el =>
           el && (el.closest && el.closest('#overlay'));
+        const canvasRotTarget = () =>
+          (typeof rotMode !== 'undefined' && rotMode === 'rgb') ? 'rotb-slider' : 'rot-offset-slider';
 
         document.addEventListener('pointerdown', e => {
           if (isInOverlay(e.target)) return;
           if (e.target instanceof HTMLInputElement) return;
           _active = true;
           _startX = e.clientX;
-          _startOffset = (typeof rotOffset !== 'undefined') ? rotOffset * 180 / Math.PI : 0;
+          _targetId = canvasRotTarget();
+          const sl = document.getElementById(_targetId);
+          _startOffset = sl ? (parseFloat(sl.value) || 0) : 0;
           _pid = e.pointerId;
           document.getElementById('overlay').classList.add('canvas-dragging');
         });
@@ -1245,7 +1398,7 @@
           const w = window.innerWidth || 1;
           const newOffset = _startOffset + (e.clientX - _startX) / w * 8 * 360;
           // Wrap to slider range so the slider value stays in sync.
-          const slider = document.getElementById('rot-offset-slider');
+          const slider = document.getElementById(_targetId);
           if (slider) {
             const min = parseFloat(slider.min), max = parseFloat(slider.max);
             const span = max - min;
@@ -1365,9 +1518,15 @@
         }
 
         const deg = r => (r * 180 / Math.PI).toFixed(1) + '°';
-        row('axis θ',     deg(axisTheta));
-        row('axis φ',     deg(axisPhi));
-        row('rotation', (rotOffset * 180 / Math.PI).toFixed(1) + '°');
+        if (typeof rotMode !== 'undefined' && rotMode === 'rgb') {
+          row('rotate R', deg(rotR));
+          row('rotate G', deg(rotG));
+          row('rotate B', deg(rotB));
+        } else {
+          row('axis θ',     deg(axisTheta));
+          row('axis φ',     deg(axisPhi));
+          row('rotation', (rotOffset * 180 / Math.PI).toFixed(1) + '°');
+        }
         row('exp a',      coordExp.toFixed(2));
         row('exp b',      coordExpImag.toFixed(1));
         row('centre R',   coordCenterX.toFixed(2));
@@ -1410,6 +1569,7 @@
       function _encodeSpeedParams() {
         const keys = {
           'theta-slider':'sp_t','phi-slider':'sp_p','rot-offset-slider':'sp_r',
+          'rotr-slider':'sp_rr','rotg-slider':'sp_rg','rotb-slider':'sp_rb',
           'exp-slider':'sp_a','expimag-slider':'sp_b',
           'cx-slider':'sp_cx','cy-slider':'sp_cy','cz-slider':'sp_cz'
         };
@@ -1422,6 +1582,7 @@
       function _applySpeedsFromHash() {
         const keys = {
           'sp_t':'theta-slider','sp_p':'phi-slider','sp_r':'rot-offset-slider',
+          'sp_rr':'rotr-slider','sp_rg':'rotg-slider','sp_rb':'rotb-slider',
           'sp_a':'exp-slider','sp_b':'expimag-slider',
           'sp_cx':'cx-slider','sp_cy':'cy-slider','sp_cz':'cz-slider'
         };
@@ -1517,6 +1678,15 @@
         setLabel ('phi-val',      pDeg.toFixed(1) + '°');
         setSlider('rot-offset-slider', (rotOffset * 180 / Math.PI).toFixed(0));
         setLabel ('rot-offset-val',    (rotOffset * 180 / Math.PI).toFixed(0) + '°');
+        if (typeof rotR !== 'undefined') {
+          setSlider('rotr-slider', (rotR * 180 / Math.PI).toFixed(0));
+          setLabel ('rotr-val',    (rotR * 180 / Math.PI).toFixed(0) + '°');
+          setSlider('rotg-slider', (rotG * 180 / Math.PI).toFixed(0));
+          setLabel ('rotg-val',    (rotG * 180 / Math.PI).toFixed(0) + '°');
+          setSlider('rotb-slider', (rotB * 180 / Math.PI).toFixed(0));
+          setLabel ('rotb-val',    (rotB * 180 / Math.PI).toFixed(0) + '°');
+        }
+        _applyRotModeUI();
         setSlider('exp-slider',   Math.log(Math.max(0.0498, coordExp)));   // log scale
         setLabel ('exp-val',      coordExp.toFixed(2));
         setSlider('expimag-slider', _imagToPos(coordExpImag));   // two-segment scale
