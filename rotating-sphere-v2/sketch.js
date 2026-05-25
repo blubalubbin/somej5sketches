@@ -264,7 +264,7 @@ function drawRGBViz() {
   const X = new Float64Array(N), Y = new Float64Array(N), Z = new Float64Array(N);
   const cr = new Float64Array(N), cg = new Float64Array(N), cb = new Float64Array(N);
   const mag = new Float64Array(N);   // |w| before renormalise; >1 = outside unit
-  let minx=0, maxx=0, miny=0, maxy=0, minz=0, maxz=0, maxMag=0;
+  let minx=0, maxx=0, miny=0, maxy=0, minz=0, maxz=0, maxMag=0, maxMagIdx=0;
   for (let i = 0; i < N; i++) {
     const wx = warpCoord(vizBaseX[i] - cX, a, b);
     const wy = warpCoord(vizBaseY[i] - cY, a, b);
@@ -278,7 +278,7 @@ function drawRGBViz() {
     if (z<minz) minz=z; if (z>maxz) maxz=z;
     const len = Math.sqrt(x*x + y*y + z*z);
     mag[i] = len;
-    if (len > maxMag) maxMag = len;
+    if (len > maxMag) { maxMag = len; maxMagIdx = i; }
     // Colour = the pixel colour this sample produces (= its unit direction).
     const L = len || 1;
     cr[i] = Math.max(0, Math.min(255, x/L*127.5 + 127.5));
@@ -532,15 +532,23 @@ function drawRGBViz() {
     fill(235, 238, 245, 235 * ca); text('|RGB| ' + cmag.toFixed(2), pEnd[0] + 9, ly);
   }
 
-  // ── caption ──
-  noStroke(); textAlign(CENTER, BOTTOM); textSize(12);
-  fill(225, 230, 240, 200 * A);
-  text('deformed sphere in RGB space', cx, cy + Math.min(width, height) * 0.30 + 36);
-  fill(150, 160, 175, 180 * A); textSize(10);
+  // ── subtle annotations ──
+  noStroke(); textSize(10);
+  // Bounds: tucked against the far-top corner of the bounding box, so it
+  // rides along as the box changes shape.
+  const bc = corners[7];   // (maxx, maxy, maxz) corner
+  fill(150, 165, 195, 95 * A); textAlign(LEFT, BOTTOM);
+  text('±' + half.toFixed(2), bc[0] + 6, bc[1] - 4);
+  // Max radius: printed next to the single furthest-out point; brightens when
+  // it pushes past the unit sphere.
   const over = maxMag > VIZ_UNIT_TOL;
-  text('bounds ±' + half.toFixed(2) + '   ·   max radius ' + maxMag.toFixed(2) +
-       (over ? '  ⟶ exceeds unit' : '  (within unit)'),
-       cx, cy + Math.min(width, height) * 0.30 + 52);
+  const fp = sp[maxMagIdx];
+  fill(over ? 255 : 150, over ? 255 : 165, over ? 255 : 195, (over ? 150 : 105) * A);
+  textAlign(LEFT, CENTER);
+  text('r ' + maxMag.toFixed(2), fp[0] + 7, fp[1]);
+  // Subtle title.
+  fill(200, 210, 225, 80 * A); textAlign(CENTER, BOTTOM); textSize(11);
+  text('deformed sphere in RGB space', cx, cy + Math.min(width, height) * 0.30 + 40);
 
   pop();
 }
