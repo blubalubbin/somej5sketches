@@ -242,6 +242,7 @@ function renderSphere(img, RM, xs, ys, zs) {
 const VIZ_HOLD_MS = 1100;   // keep visible this long after the last change
 const VIZ_VIEW_YAW   = -0.62;
 const VIZ_VIEW_PITCH =  0.52;
+const VIZ_UNIT_TOL   = 1.004;   // treat |w| above this as "outside unit" (FP slack)
 
 function drawRGBViz() {
   const now = (typeof millis === 'function') ? millis() : 0;
@@ -262,7 +263,8 @@ function drawRGBViz() {
   // Transform every sample: warp → rotate (NO renormalise → keeps deformation).
   const X = new Float64Array(N), Y = new Float64Array(N), Z = new Float64Array(N);
   const cr = new Float64Array(N), cg = new Float64Array(N), cb = new Float64Array(N);
-  let minx=0, maxx=0, miny=0, maxy=0, minz=0, maxz=0;
+  const mag = new Float64Array(N);   // |w| before renormalise; >1 = outside unit
+  let minx=0, maxx=0, miny=0, maxy=0, minz=0, maxz=0, maxMag=0;
   for (let i = 0; i < N; i++) {
     const wx = warpCoord(vizBaseX[i] - cX, a, b);
     const wy = warpCoord(vizBaseY[i] - cY, a, b);
@@ -274,8 +276,11 @@ function drawRGBViz() {
     if (x<minx) minx=x; if (x>maxx) maxx=x;
     if (y<miny) miny=y; if (y>maxy) maxy=y;
     if (z<minz) minz=z; if (z>maxz) maxz=z;
+    const len = Math.sqrt(x*x + y*y + z*z);
+    mag[i] = len;
+    if (len > maxMag) maxMag = len;
     // Colour = the pixel colour this sample produces (= its unit direction).
-    const L = Math.sqrt(x*x + y*y + z*z) || 1;
+    const L = len || 1;
     cr[i] = Math.max(0, Math.min(255, x/L*127.5 + 127.5));
     cg[i] = Math.max(0, Math.min(255, y/L*127.5 + 127.5));
     cb[i] = Math.max(0, Math.min(255, z/L*127.5 + 127.5));
@@ -345,6 +350,13 @@ function drawRGBViz() {
       stroke(rr, gg, bb, 230 * A); strokeWeight(1);
       fill(rr, gg, bb, 230 * A);
       quad(sp[a][0], sp[a][1], sp[b][0], sp[b][1], sp[c][0], sp[c][1], sp[d][0], sp[d][1]);
+      // Outline facets that reach outside the unit sphere; brighter the further.
+      const mx = Math.max(mag[a], mag[b], mag[c], mag[d]);
+      if (mx > VIZ_UNIT_TOL) {
+        const f = Math.min(1, (mx - 1) * 1.2);
+        noFill(); stroke(255, 255, 255, (85 + 130 * f) * A); strokeWeight(1 + 0.8 * f);
+        quad(sp[a][0], sp[a][1], sp[b][0], sp[b][1], sp[c][0], sp[c][1], sp[d][0], sp[d][1]);
+      }
     }
   } else {
     // Individual depth-sorted coloured dots.
@@ -352,9 +364,36 @@ function drawRGBViz() {
     for (const i of order) {
       const s = sp[i];
       const near = 1 - (s[2] - dmin) / dspan;   // 1 = nearest, 0 = farthest
-      stroke(0, 0, 0, 70 * A); strokeWeight(0.75);
+      // Outside the unit sphere → bright white ring (scales with overshoot).
+      if (mag[i] > VIZ_UNIT_TOL) {
+        const f = Math.min(1, (mag[i] - 1) * 1.5);
+        stroke(255, 255, 255, (120 + 135 * f) * A); strokeWeight(1 + 1.2 * f);
+      } else {
+        stroke(0, 0, 0, 70 * A); strokeWeight(0.75);
+      }
       fill(cr[i], cg[i], cb[i], (140 + 100 * near) * A);
       circle(s[0], s[1], 2.6 + 2.4 * near);
+    }
+  }
+
+  // ── unit-sphere reference: three faint great circles (the natural bound) ──
+  // Drawn over the shape so the part that bulges past unit radius is obvious.
+  {
+    const segs = 48;
+    const rings = [
+      [[1,0,0],[0,1,0]],   // XY
+      [[0,1,0],[0,0,1]],   // YZ
+      [[1,0,0],[0,0,1]],   // XZ
+    ];
+    stroke(205, 215, 235, 45 * A); strokeWeight(1); noFill();
+    for (const [u, w] of rings) {
+      let prev = null;
+      for (let i = 0; i <= segs; i++) {
+        const an = 2 * Math.PI * i / segs, c = Math.cos(an), s = Math.sin(an);
+        const pt = proj(c*u[0] + s*w[0], c*u[1] + s*w[1], c*u[2] + s*w[2]);
+        if (prev) line(prev[0], prev[1], pt[0], pt[1]);
+        prev = pt;
+      }
     }
   }
 
@@ -464,22 +503,29 @@ function drawRGBViz() {
                text((rotOffset * 180 / Math.PI).toFixed(0) + '°', mid[0], mid[1]); }
   }
 
-  // Centre offset — R/G/B component legs + resultant arrow + magnitude.
+  // Centre offset — distance along each R/G/B reference axis (the offset's X/Y/Z
+  // components are the R/G/B channels) + resultant arrow and magnitude.
   if (indAlpha.centre > 0.02) {
     const ca = A * indAlpha.centre;
-    const ox = coordCenterX, oy = coordCenterY, oz = coordCenterZ;
-    const mag = Math.sqrt(ox*ox + oy*oy + oz*oz);
-    const pX = proj(ox, 0, 0), pXY = proj(ox, oy, 0), pEnd = proj(ox, oy, oz);
+    const dR = coordCenterX, dG = coordCenterY, dB = coordCenterZ;
+    const cmag = Math.sqrt(dR*dR + dG*dG + dB*dB);
+    const pR = proj(dR, 0, 0), pRG = proj(dR, dG, 0), pEnd = proj(dR, dG, dB);
     strokeWeight(1.5);
-    stroke(255, 120, 120, 170 * ca); line(o[0], o[1], pX[0], pX[1]);
-    stroke(120, 230, 140, 170 * ca); line(pX[0], pX[1], pXY[0], pXY[1]);
-    stroke(120, 170, 255, 170 * ca); line(pXY[0], pXY[1], pEnd[0], pEnd[1]);
+    stroke(255, 120, 120, 170 * ca); line(o[0], o[1], pR[0], pR[1]);
+    stroke(120, 230, 140, 170 * ca); line(pR[0], pR[1], pRG[0], pRG[1]);
+    stroke(120, 170, 255, 170 * ca); line(pRG[0], pRG[1], pEnd[0], pEnd[1]);
     stroke(245, 245, 250, 235 * ca); strokeWeight(2);
     line(o[0], o[1], pEnd[0], pEnd[1]);
-    if (mag > 1e-4) _vizArrowHead(o, pEnd, [245, 245, 250], ca);
+    if (cmag > 1e-4) _vizArrowHead(o, pEnd, [245, 245, 250], ca);
     noStroke(); fill(245, 245, 250, 235 * ca); circle(pEnd[0], pEnd[1], 4.6);
-    fill(235, 238, 245, 232 * ca); textAlign(LEFT, CENTER);
-    text('|offset| ' + mag.toFixed(2), pEnd[0] + 9, pEnd[1]);
+    // Per-channel distance readout, aligned to the R/G/B reference axes.
+    const sgn = v => (v >= 0 ? '+' : '') + v.toFixed(2);
+    textAlign(LEFT, CENTER); textSize(10);
+    let ly = pEnd[1] - 21;
+    fill(255, 140, 140, 235 * ca); text('R ' + sgn(dR), pEnd[0] + 9, ly); ly += 14;
+    fill(140, 235, 160, 235 * ca); text('G ' + sgn(dG), pEnd[0] + 9, ly); ly += 14;
+    fill(140, 185, 255, 235 * ca); text('B ' + sgn(dB), pEnd[0] + 9, ly); ly += 14;
+    fill(235, 238, 245, 235 * ca); text('|RGB| ' + cmag.toFixed(2), pEnd[0] + 9, ly);
   }
 
   // ── caption ──
@@ -487,7 +533,9 @@ function drawRGBViz() {
   fill(225, 230, 240, 200 * A);
   text('deformed sphere in RGB space', cx, cy + Math.min(width, height) * 0.30 + 36);
   fill(150, 160, 175, 180 * A); textSize(10);
-  text('bounds ±' + half.toFixed(2) + '   ·   colour = position direction',
+  const over = maxMag > VIZ_UNIT_TOL;
+  text('bounds ±' + half.toFixed(2) + '   ·   max radius ' + maxMag.toFixed(2) +
+       (over ? '  ⟶ exceeds unit' : '  (within unit)'),
        cx, cy + Math.min(width, height) * 0.30 + 52);
 
   pop();
