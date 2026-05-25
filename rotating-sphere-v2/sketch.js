@@ -20,9 +20,9 @@ let coordCenterZ = 0.0;
 let rotOffset = 0.0;
 
 // Rotation parameterisation:
+//   'rgb'  — three Euler rotations about the R/G/B (X/Y/Z) colour axes (default).
 //   'axis' — one rotation as axis-angle (rotOffset about the θ/φ axis).
-//   'rgb'  — three Euler rotations about the R/G/B (X/Y/Z) colour axes.
-let rotMode = 'axis';
+let rotMode = 'rgb';
 let rotR = 0.0, rotG = 0.0, rotB = 0.0;   // RGB-axis rotation angles (radians)
 
 // ── RGB-space overlay ────────────────────────────────────────────────
@@ -195,7 +195,10 @@ function applySettingsFromHash() {
   if ('rr' in s) rotR = num(s.rr, 0) * Math.PI / 180;
   if ('rg' in s) rotG = num(s.rg, 0) * Math.PI / 180;
   if ('rb' in s) rotB = num(s.rb, 0) * Math.PI / 180;
-  if ('rmode' in s) rotMode = (s.rmode === 'rgb') ? 'rgb' : 'axis';
+  // The mode marker is only emitted for RGB links, so a hash without it is an
+  // axis-mode link (including older links from before RGB mode existed). Force
+  // axis there so it overrides the now-RGB default rather than inheriting it.
+  rotMode = ('rmode' in s) ? (s.rmode === 'rgb' ? 'rgb' : 'axis') : 'axis';
 }
 
 // Real part of sign(v)·|v|^(a+ib).  At a=1, b=0 this is the identity.
@@ -375,7 +378,7 @@ function drawRGBViz() {
   stroke(130, 150, 180, 60 * A); strokeWeight(1);
   for (const [u, v] of edges) line(corners[u][0], corners[u][1], corners[v][0], corners[v][1]);
 
-  // ── deformed sphere ──
+  // ── deformed sphere + RGB axes (depth-merged so the shape occludes the axes) ──
   const sp = new Array(N);
   let dmin = Infinity, dmax = -Infinity;
   for (let i = 0; i < N; i++) {
@@ -386,20 +389,49 @@ function drawRGBViz() {
   }
   const dspan = (dmax - dmin) || 1;
 
+  const o = proj(0, 0, 0);
+  const axes = [
+    { e: proj(1, 0, 0), dir: [1, 0, 0], col: [255, 90, 90],  lbl: 'R' },
+    { e: proj(0, 1, 0), dir: [0, 1, 0], col: [90, 220, 120], lbl: 'G' },
+    { e: proj(0, 0, 1), dir: [0, 0, 1], col: [90, 150, 255], lbl: 'B' },
+  ];
+
+  // One depth-sorted primitive list so the painter's order (far first) lets the
+  // surface / dots paint over the stretch of an axis that sits behind them.
+  // kind 0 = surface quad, 1 = dot, 2 = RGB-axis sub-segment.
+  const prims = [];
   if (vizSurface) {
-    // Filled mesh: stitch adjacent grid samples into depth-sorted quads.
-    const quads = [];
     for (let j = 0; j < VIZ_MER - 1; j++) {
       for (let i = 0; i < VIZ_PAR; i++) {
         const i2 = (i + 1) % VIZ_PAR;
         const a = j * VIZ_PAR + i,        b = j * VIZ_PAR + i2;
         const c = (j + 1) * VIZ_PAR + i2, d = (j + 1) * VIZ_PAR + i;
-        quads.push([a, b, c, d, (sp[a][2] + sp[b][2] + sp[c][2] + sp[d][2]) * 0.25]);
+        prims.push([(sp[a][2] + sp[b][2] + sp[c][2] + sp[d][2]) * 0.25, 0, a, b, c, d]);
       }
     }
-    quads.sort((p, q) => q[4] - p[4]);   // far first
-    for (const [a, b, c, d, depth] of quads) {
-      const near = 1 - (depth - dmin) / dspan;
+  } else {
+    for (let i = 0; i < N; i++) prims.push([sp[i][2], 1, i]);
+  }
+  // Subdivide each axis (origin → unit tip) so it can be partly occluded; the
+  // last sub-segment carries the arrowhead.
+  const AX_SEG = 16;
+  for (const ax of axes) {
+    let pp = o, pd = o[2];
+    for (let i = 1; i <= AX_SEG; i++) {
+      const t = i / AX_SEG;
+      const p = proj(ax.dir[0] * t, ax.dir[1] * t, ax.dir[2] * t);
+      prims.push([(pd + p[2]) * 0.5, 2, pp[0], pp[1], p[0], p[1],
+                  ax.col[0], ax.col[1], ax.col[2], i === AX_SEG ? 1 : 0]);
+      pp = p; pd = p[2];
+    }
+  }
+  prims.sort((p, q) => q[0] - p[0]);   // far first
+
+  for (const pr of prims) {
+    const kind = pr[1];
+    if (kind === 0) {
+      const a = pr[2], b = pr[3], c = pr[4], d = pr[5];
+      const near = 1 - (pr[0] - dmin) / dspan;
       const sh = 0.65 + 0.35 * near;     // dim the far side slightly for form
       const rr = (cr[a] + cr[b] + cr[c] + cr[d]) * 0.25 * sh;
       const gg = (cg[a] + cg[b] + cg[c] + cg[d]) * 0.25 * sh;
@@ -415,12 +447,8 @@ function drawRGBViz() {
         noFill(); stroke(255, 255, 255, (85 + 130 * f) * A); strokeWeight(1 + 0.8 * f);
         quad(sp[a][0], sp[a][1], sp[b][0], sp[b][1], sp[c][0], sp[c][1], sp[d][0], sp[d][1]);
       }
-    }
-  } else {
-    // Individual depth-sorted coloured dots.
-    const order = Array.from({length: N}, (_, i) => i).sort((p, q) => sp[q][2] - sp[p][2]);
-    for (const i of order) {
-      const s = sp[i];
+    } else if (kind === 1) {
+      const i = pr[2], s = sp[i];
       const near = 1 - (s[2] - dmin) / dspan;   // 1 = nearest, 0 = farthest
       // Outside the unit sphere → bright white ring (scales with overshoot).
       if (mag[i] > VIZ_UNIT_TOL) {
@@ -431,6 +459,10 @@ function drawRGBViz() {
       }
       fill(cr[i], cg[i], cb[i], (140 + 100 * near) * A);
       circle(s[0], s[1], 2.6 + 2.4 * near);
+    } else {
+      stroke(pr[6], pr[7], pr[8], 235 * A); strokeWeight(2.5);
+      line(pr[2], pr[3], pr[4], pr[5]);
+      if (pr[9]) _vizArrowHead([pr[2], pr[3]], [pr[4], pr[5]], [pr[6], pr[7], pr[8]], A);
     }
   }
 
@@ -455,19 +487,10 @@ function drawRGBViz() {
     }
   }
 
-  // ── unit RGB axes (fixed colour-space frame) ──
-  const o = proj(0, 0, 0);
-  const axes = [
-    { e: proj(1, 0, 0), col: [255, 90, 90],  lbl: 'R' },
-    { e: proj(0, 1, 0), col: [90, 220, 120], lbl: 'G' },
-    { e: proj(0, 0, 1), col: [90, 150, 255], lbl: 'B' },
-  ];
-  textSize(14); textAlign(CENTER, CENTER);
+  // ── RGB axis labels (kept on top so they stay legible over the shape) ──
+  textSize(14); textAlign(CENTER, CENTER); noStroke();
   for (const ax of axes) {
-    stroke(ax.col[0], ax.col[1], ax.col[2], 235 * A); strokeWeight(2.5);
-    line(o[0], o[1], ax.e[0], ax.e[1]);
-    _vizArrowHead(o, ax.e, ax.col, A);
-    noStroke(); fill(ax.col[0], ax.col[1], ax.col[2], 240 * A);
+    fill(ax.col[0], ax.col[1], ax.col[2], 240 * A);
     text(ax.lbl, ax.e[0] + (ax.e[0] - o[0]) * 0.13, ax.e[1] + (ax.e[1] - o[1]) * 0.13);
   }
 

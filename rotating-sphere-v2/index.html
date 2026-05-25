@@ -411,11 +411,11 @@
           <span>Rotation</span>
           <button class="reset-btn" onclick="resetSection('rotation')" title="Reset rotation">&#8634;</button>
           <div style="flex:1"></div>
-          <button class="speed-play-btn" id="rot-mode-btn" onclick="toggleRotMode()">RGB axes</button>
+          <button class="speed-play-btn" id="rot-mode-btn" onclick="toggleRotMode()">Axis + angle</button>
         </div>
 
         <!-- Axis-angle mode: one rotation about the θ/φ axis. -->
-        <div id="rot-axis-mode">
+        <div id="rot-axis-mode" style="display:none;">
           <div class="slider-group">
             <div class="ctrl-row">
               <button class="reset-btn" onclick="resetSlider('rot-offset-slider')">&#8634;</button>
@@ -474,7 +474,7 @@
         </div>
 
         <!-- RGB-axis mode: three Euler rotations about the R/G/B colour axes. -->
-        <div id="rot-rgb-mode" style="display:none;">
+        <div id="rot-rgb-mode">
           <div class="slider-group">
             <div class="ctrl-row">
               <button class="reset-btn" onclick="resetSlider('rotr-slider')">&#8634;</button>
