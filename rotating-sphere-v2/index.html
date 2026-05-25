@@ -957,11 +957,16 @@
         if (group) group.classList.toggle('has-speed', speed !== 0);
       }
 
+      // Continuous (un-snapped) cycle positions. We accumulate speed here and
+      // only snap when writing slider.value, so speeds smaller than one step
+      // still advance (snapping every frame used to round them away → stall).
+      const _cyclePos = {};
+      const _snap = (v, min, step) => (step > 0 ? min + Math.round((v - min) / step) * step : v);
+
       function _advanceSliders() {
         for (const id in _sliderSpeeds) {
           const speed = _sliderSpeeds[id];
-          if (!speed) continue;
-          if (id === _draggingSliderId) continue;
+          if (!speed || id === _draggingSliderId) { delete _cyclePos[id]; continue; }
           const slider = document.getElementById(id);
           if (!slider) continue;
           const min = parseFloat(slider.min);
@@ -969,7 +974,11 @@
           const step = parseFloat(slider.step) || 0;
           const span = max - min;
           if (span <= 0) continue;
-          let v = parseFloat(slider.value);
+          // Use the continuous position, but resync if the slider was changed
+          // elsewhere (manual drag, reset, hash load).
+          const cur = parseFloat(slider.value);
+          let v = _cyclePos[id];
+          if (v === undefined || Math.abs(cur - _snap(v, min, step)) > (step || 0) * 1.5) v = cur;
           if (_OSCILLATE_IDS.has(id)) {
             // Oscillate within the trim bounds (falls back to slider min/max).
             const ob  = _getOscBounds(id);
@@ -1000,8 +1009,8 @@
               slider.addEventListener('animationend', () => slider.classList.remove('anim-wrap'), { once: true });
             }
           }
-          if (step > 0) v = min + Math.round((v - min) / step) * step;
-          slider.value = v;
+          _cyclePos[id] = v;
+          slider.value = _snap(v, min, step);
           slider.dispatchEvent(new Event('input', { bubbles: true }));
         }
       }
