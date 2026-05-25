@@ -94,7 +94,7 @@ The colour-coded centre sliders (R = red, G = green, B = blue) match the R/G/B r
 
 While a parameter is changing — dragged by hand or advanced by a ▶ play button — a 3D wireframe fades in over the render and relates the flat UV map back to a shape:
 
-- **Deformed sphere** — the unit sphere is sampled on a coarse grid and pushed through the warp (`centre → exponent → imaginary`) *without* the final renormalise step, so the points genuinely bulge away from a sphere.  Each vertex is drawn at its position and tinted with the exact pixel colour it produces — its normalised direction — so the cloud literally sits in RGB space.  A button in the controls panel toggles between **dots** and a filled **surface** mesh.
+- **Deformed sphere** — the unit sphere is sampled on a coarse grid and pushed through the warp (`centre → exponent → imaginary`) *without* the final renormalise step, so the points genuinely bulge away from a sphere.  Each vertex is drawn at its position and tinted with the exact pixel colour it produces — its normalised direction — so the cloud literally sits in RGB space.  A button in the controls panel toggles between a filled **surface** mesh (the default) and individual **dots**.
 - **Unit axes** — fixed R/G/B arrows mark the colour-channel frame.
 - **Unit-sphere reference** — three faint great circles show the unit radius (the natural colour bound).  Because the colour comes only from each vertex's *direction*, the radial bulge is otherwise invisible: any part of the shape reaching past unit length is highlighted (a bright white ring on overshooting dots, a white outline on overshooting surface facets), and the caption reports the `max radius` and whether it exceeds unit.
 - **Bounding box** — scales to the shape's actual extent, which grows or shrinks with the warp parameters; the caption reports the current half-extent.
@@ -106,6 +106,10 @@ While a single control is **dragged by hand**, an extra indicator for that param
 - **Azimuth φ** — a magenta arc swept around the XY equator from +X, with a drop line from the axis tip, showing the compass heading.
 - **Rotation** — a yellow circular arrow swirling around the axis, whose phase tracks the offset.
 - **Centre offset** — red/green/blue component legs plus a resultant arrow, with the distance along each R/G/B reference axis read out (`R +0.40`, `G −0.30`, `B …`) and the total `|RGB|` magnitude.
+
+#### Glassy tips
+
+While you adjust a control by hand, a large explanatory caption fades in over the canvas — the text is mostly transparent with a bright glass rim, so the colourful render shows through the letterforms.  A short eyebrow + big headline name the parameter, and supporting lines explain how to read the helper numbers — in particular that **bounds** (how far the warped shape reaches) is *not* the same as **|RGB|** (how far the centre offset has been shifted).  The tips are on by default and can be turned off from the controls panel; they only respond to hands-on edits, not auto-cycling.
 
 The overlay is purely informational and disappears about a second after the last change.
 

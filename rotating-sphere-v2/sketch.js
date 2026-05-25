@@ -36,7 +36,7 @@ const VIZ_MER = 18, VIZ_PAR = 36;   // overlay grid resolution (coarse)
 let manualChange = { theta: -1e9, phi: -1e9, rot: -1e9, centre: -1e9 };
 let indAlpha     = { theta: 0, phi: 0, rot: 0, centre: 0 };
 // Overlay render style: false = individual dots, true = filled surface mesh.
-let vizSurface = false;
+let vizSurface = true;
 function setVizSurface(on) { vizSurface = !!on; }
 
 function setup() {
