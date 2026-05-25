@@ -369,14 +369,49 @@ function drawRGBViz() {
   textFont('monospace');
 
   // ── bounding box (actual parameter-dependent extent) ──
+  // Each edge runs parallel to one colour axis (X→R, Y→G, Z→B). Split it where
+  // it crosses the unit boundary (value ±1): the stretch beyond unit is drawn
+  // in that axis's bright colour, the part inside the unit cube stays faint —
+  // so you can see exactly where (and in which channel) the box exceeds unit.
   const corners = [];
   for (const xi of [minx, maxx])
     for (const yi of [miny, maxy])
       for (const zi of [minz, maxz])
         corners.push(proj(xi, yi, zi));
-  const edges = [[0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[3,7],[4,5],[4,6],[5,7],[6,7]];
-  stroke(130, 150, 180, 60 * A); strokeWeight(1);
-  for (const [u, v] of edges) line(corners[u][0], corners[u][1], corners[v][0], corners[v][1]);
+  // [loCornerIdx, hiCornerIdx, axis] — axis 0=R(x), 1=G(y), 2=B(z); lo corner
+  // sits at the axis's min value, hi corner at its max.
+  const boxEdges = [
+    [0,1,2],[2,3,2],[4,5,2],[6,7,2],   // B (z)
+    [0,2,1],[1,3,1],[4,6,1],[5,7,1],   // G (y)
+    [0,4,0],[1,5,0],[2,6,0],[3,7,0],   // R (x)
+  ];
+  const _boxCols   = [[255,90,90],[90,220,120],[90,150,255]];
+  const _boxRanges = [[minx,maxx],[miny,maxy],[minz,maxz]];
+  for (const [u, v, ax] of boxEdges) {
+    const [lo, hi] = _boxRanges[ax];
+    const span = hi - lo;
+    const pu = corners[u], pv = corners[v];
+    // Breakpoints: the edge's value run [lo,hi] cut at any ±1 it crosses.
+    const cuts = [lo];
+    if (-1 > lo && -1 < hi) cuts.push(-1);
+    if ( 1 > lo &&  1 < hi) cuts.push(1);
+    cuts.push(hi);
+    cuts.sort((a, b) => a - b);
+    for (let k = 0; k < cuts.length - 1; k++) {
+      const a = cuts[k], b = cuts[k + 1];
+      const ta = span !== 0 ? (a - lo) / span : 0;
+      const tb = span !== 0 ? (b - lo) / span : 1;
+      const x0 = pu[0] + (pv[0] - pu[0]) * ta, y0 = pu[1] + (pv[1] - pu[1]) * ta;
+      const x1 = pu[0] + (pv[0] - pu[0]) * tb, y1 = pu[1] + (pv[1] - pu[1]) * tb;
+      if (Math.abs((a + b) * 0.5) > 1) {        // beyond unit on this axis
+        const c = _boxCols[ax];
+        stroke(c[0], c[1], c[2], 200 * A); strokeWeight(1.6);
+      } else {                                   // inside the unit cube
+        stroke(140, 155, 185, 50 * A); strokeWeight(1);
+      }
+      line(x0, y0, x1, y1);
+    }
+  }
 
   // ── deformed sphere + RGB axes (depth-merged so the shape occludes the axes) ──
   const sp = new Array(N);
@@ -390,10 +425,12 @@ function drawRGBViz() {
   const dspan = (dmax - dmin) || 1;
 
   const o = proj(0, 0, 0);
+  // G points down the −Y direction so the three reference arrows splay ~120°
+  // apart (an equilateral triad) in this view instead of bunching on the right.
   const axes = [
-    { e: proj(1, 0, 0), dir: [1, 0, 0], col: [255, 90, 90],  lbl: 'R' },
-    { e: proj(0, 1, 0), dir: [0, 1, 0], col: [90, 220, 120], lbl: 'G' },
-    { e: proj(0, 0, 1), dir: [0, 0, 1], col: [90, 150, 255], lbl: 'B' },
+    { e: proj(1, 0,  0), dir: [1,  0, 0], col: [255, 90, 90],  lbl: 'R' },
+    { e: proj(0, -1, 0), dir: [0, -1, 0], col: [90, 220, 120], lbl: 'G' },
+    { e: proj(0, 0,  1), dir: [0,  0, 1], col: [90, 150, 255], lbl: 'B' },
   ];
 
   // One depth-sorted primitive list so the painter's order (far first) lets the
