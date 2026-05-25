@@ -24,6 +24,10 @@
         backdrop-filter: blur(8px);
         border-bottom: 1px solid rgba(255,255,255,0.1);
         transition: opacity 140ms ease;
+        /* When many sliders are playing their speed/trim rows are all shown,
+           so allow the panel to scroll instead of overflowing the viewport. */
+        max-height: calc(100vh - 4.5rem);
+        overflow-y: auto;
       }
       #controls-panel.open { display: block; }
       /* While a slider is being dragged, fade the panel so the sphere
@@ -89,13 +93,9 @@
         opacity: 0;
         transition: max-height 0.2s ease, opacity 0.2s ease;
       }
-      /* Show when speed active + slider just used (highlighted) or actively hovered */
-      .slider-group.has-speed.highlighted .speed-row { max-height: 2.5rem; opacity: 1; }
-      #controls-panel:hover .slider-group.has-speed:hover .speed-row,
-      #controls-panel:hover .slider-group.has-speed:focus-within .speed-row { max-height: 2.5rem; opacity: 1; }
-      /* Also hide during pointer-drag, but not if the speed row is the one being dragged */
-      #controls-panel.dragging .speed-row { max-height: 0 !important; opacity: 0 !important; }
-      #controls-panel.dragging .slider-group.dragging-speed .speed-row { max-height: 2.5rem !important; opacity: 1 !important; }
+      /* Shown whenever the slider is auto-cycling — independent of hover, so
+         hovering never changes the panel height (avoids reveal-on-hover flicker). */
+      .slider-group.has-speed .speed-row { max-height: 2.5rem; opacity: 1; }
       .speed-label {
         min-width: 100px;
         color: #888; font-size: 0.75rem;
@@ -137,11 +137,8 @@
         opacity: 0;
         transition: max-height 0.2s ease, opacity 0.2s ease;
       }
-      /* Show only when speed active + highlighted or hovered (mirrors speed-row behaviour) */
-      .slider-group.has-speed.highlighted .trim-row { max-height: 2.5rem; opacity: 1; }
-      #controls-panel:hover .slider-group.has-speed:hover .trim-row,
-      #controls-panel:hover .slider-group.has-speed:focus-within .trim-row { max-height: 2.5rem; opacity: 1; }
-      #controls-panel.dragging .trim-row { max-height: 0 !important; opacity: 0 !important; }
+      /* Shown whenever the slider is auto-cycling (mirrors speed-row); no hover gating. */
+      .slider-group.has-speed .trim-row { max-height: 2.5rem; opacity: 1; }
       .trim-label {
         min-width: 100px;
         color: #888; font-size: 0.75rem;
