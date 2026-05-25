@@ -58,9 +58,7 @@
 
       /* ── HUD minimised state ── */
       #hud.minimised .hud-label { display: none; }
-      #hud.minimised #hud-text  { display: none; }
       #hud.minimised { flex-wrap: nowrap; }
-      #hud-text { flex-basis: 100%; }
 
       .ctrl-row {
         display: flex; align-items: center;
@@ -218,8 +216,6 @@
         background: rgba(88,166,255,0.18);
         border-color: rgba(88,166,255,0.5);
       }
-      .info-name { font-weight: 600; }
-      .info-desc { color: #aaa; font-size: 0.9rem; margin-top: 0.25rem; }
 
       /* ── Info panel ── */
       #info-panel {
@@ -372,10 +368,6 @@
         <button id="info-btn" onclick="toggleInfo()">&#9432; <span class="hud-label">Info</span></button>
         <button id="ctrl-btn" onclick="toggleControls()">&#9881; <span class="hud-label">Controls</span></button>
         <button id="minimise-btn" onclick="toggleHudMinimise()" title="Minimise HUD">&#8863;</button>
-        <div id="hud-text">
-          <div class="info-name">Rotating sphere v2</div>
-          <div class="info-desc">Drag the canvas to rotate &middot; Controls to adjust &middot; Download to export</div>
-        </div>
       </div>
 
       <div id="info-panel">
@@ -627,57 +619,6 @@
           document.getElementById('info-btn').classList.add('active');
         }
       });
-
-      // ── Slider hint descriptions ────────────────────────────────────────
-      const _sliderHints = {
-        'theta-slider':          'Polar (θ) — tilts the rotation axis; visible only when rotation is non-zero',
-        'phi-slider':            'Azimuth (φ) — sweeps the axis around the vertical; visible only when rotation is non-zero',
-        'rot-offset-slider':     'Rotation — manually spins the sphere around its axis',
-        'exp-slider':            'Exponent (a) — raises each surface coordinate to this power before colouring',
-        'expimag-slider':        'Imaginary (b) — adds a spiral twist via complex exponentiation',
-        'cx-slider':             'Centre R — shifts the origin along the red (R) axis before the warp is applied',
-        'cy-slider':             'Centre G — shifts the origin along the green (G) axis before the warp is applied',
-        'cz-slider':             'Centre B — shifts the origin along the blue (B) axis before the warp is applied',
-        'theta-slider-speed':    'Speed: auto-rotates polar angle (θ) continuously',
-        'phi-slider-speed':      'Speed: auto-rotates azimuth (φ) continuously',
-        'rot-offset-slider-speed':'Speed: continuously spins the sphere',
-        'exp-slider-speed':      'Speed: cycles exponent (a) within its trim range',
-        'expimag-slider-speed':  'Speed: cycles imaginary (b) within its trim range',
-        'cx-slider-speed':       'Speed: oscillates Centre R',
-        'cy-slider-speed':       'Speed: oscillates Centre G',
-        'cz-slider-speed':       'Speed: oscillates Centre B',
-      };
-
-      (function () {
-        const hudText = document.getElementById('hud-text');
-        const defaultHTML = hudText.innerHTML;
-
-        function showHint(id) {
-          const text = _sliderHints[id];
-          if (!text) return;
-          const [name, ...rest] = text.split(' — ');
-          hudText.innerHTML =
-            `<div class="info-name" style="color:#58a6ff">${name}</div>` +
-            (rest.length ? `<div class="info-desc">${rest.join(' — ')}</div>` : '');
-        }
-        function hideHint() { hudText.innerHTML = defaultHTML; }
-
-        document.getElementById('controls-panel').addEventListener('mouseover', e => {
-          const el = e.target.closest('input[type="range"]');
-          if (el) showHint(el.id);
-        });
-        document.getElementById('controls-panel').addEventListener('mouseout', e => {
-          if (!e.target.closest('input[type="range"]')) return;
-          const rel = e.relatedTarget ? e.relatedTarget.closest('input[type="range"]') : null;
-          if (!rel) hideHint();
-        });
-        document.getElementById('controls-panel').addEventListener('focusin', e => {
-          if (e.target.matches('input[type="range"]')) showHint(e.target.id);
-        });
-        document.getElementById('controls-panel').addEventListener('focusout', e => {
-          if (e.target.matches('input[type="range"]')) hideHint();
-        });
-      })();
 
       function pauseAll() {
         for (const id of Object.keys(_sliderSpeeds)) {
