@@ -497,9 +497,11 @@
           <div class="ctrl-row">
             <button class="reset-btn" onclick="resetSlider('expimag-slider')">&#8634;</button>
             <span class="ctrl-label">Imaginary (b)</span>
-            <input id="expimag-slider" type="range" min="0" max="50" step="0.1" value="0"
-              oninput="setCoordExpImag(this.value);
-                       document.getElementById('expimag-val').textContent=(+this.value).toFixed(1)">
+            <!-- Two-segment scale: slider value is a 0..1 position; first half
+                 covers b 0→π, second half π→50 (see _imagFromPos). -->
+            <input id="expimag-slider" type="range" min="0" max="1" step="0.001" value="0"
+              oninput="setCoordExpImag(_imagFromPos(+this.value));
+                       document.getElementById('expimag-val').textContent=_imagFromPos(+this.value).toFixed(1)">
             <span class="ctrl-value" id="expimag-val">0.0</span>
             <button class="speed-play-btn" id="expimag-slider-play-btn" onclick="toggleSliderSpeed('expimag-slider')">▶</button>
           </div>
@@ -516,7 +518,7 @@
           </div>
           <div class="speed-row">
             <span class="speed-label">↻ speed</span>
-            <input id="expimag-slider-speed" type="range" min="0" max="2" step="0.025" value="0"
+            <input id="expimag-slider-speed" type="range" min="0" max="0.05" step="0.001" value="0"
               oninput="setSliderSpeed('expimag-slider', this.value)">
             <span class="speed-value" id="expimag-slider-speed-val">0.000</span>
           </div>
@@ -629,6 +631,19 @@
           document.getElementById('info-btn').classList.add('active');
         }
       });
+
+      // Imaginary (b) uses a two-segment scale: the slider's first half maps
+      // 0→π (the busy low range, given lots of room), the second half maps
+      // π→50 linearly. The slider value is a 0..1 position; b is derived from it.
+      const _B_MAX = 50, _B_MID = Math.PI;
+      function _imagFromPos(p) {
+        return p <= 0.5 ? (p / 0.5) * _B_MID
+                        : _B_MID + ((p - 0.5) / 0.5) * (_B_MAX - _B_MID);
+      }
+      function _imagToPos(b) {
+        return b <= _B_MID ? (b / _B_MID) * 0.5
+                           : 0.5 + ((b - _B_MID) / (_B_MAX - _B_MID)) * 0.5;
+      }
 
       function pauseAll() {
         for (const id of Object.keys(_sliderSpeeds)) {
@@ -839,7 +854,7 @@
         'phi-slider':        0.75,
         'rot-offset-slider': 3,
         'exp-slider':        0.03,
-        'expimag-slider':    0.5,
+        'expimag-slider':    0.006,
         'cx-slider':         0.012,
         'cy-slider':         0.012,
         'cz-slider':         0.012,
@@ -847,10 +862,11 @@
 
       // Per-slider oscillation bounds (lo/hi within the slider's full range).
       // Only exp-slider and expimag-slider have trim UI; others fall back to slider min/max.
-      // exp-slider is log-scaled, so its bounds are in ln(exponent) units (-3..3).
+      // exp-slider is log-scaled (bounds in ln(exponent), -3..3); expimag-slider
+      // is the 0..1 position of its two-segment scale.
       const _oscBounds = {
-        'exp-slider':     { lo: -3, hi: 3   },
-        'expimag-slider': { lo: 0,  hi: 50  },
+        'exp-slider':     { lo: -3, hi: 3 },
+        'expimag-slider': { lo: 0,  hi: 1 },
       };
 
       function _getOscBounds(id) {
@@ -879,6 +895,9 @@
           if (sliderId === 'exp-slider') {
             // Bounds are in ln(exponent) units; show the actual exponent range.
             valEl.textContent = Math.exp(bounds.lo).toFixed(2) + ' – ' + Math.exp(bounds.hi).toFixed(2);
+          } else if (sliderId === 'expimag-slider') {
+            // Bounds are 0..1 positions; show the actual b range.
+            valEl.textContent = _imagFromPos(bounds.lo).toFixed(1) + ' – ' + _imagFromPos(bounds.hi).toFixed(1);
           } else {
             valEl.textContent = bounds.lo.toFixed(1) + ' – ' + bounds.hi.toFixed(1);
           }
@@ -1500,7 +1519,7 @@
         setLabel ('rot-offset-val',    (rotOffset * 180 / Math.PI).toFixed(0) + '°');
         setSlider('exp-slider',   Math.log(Math.max(0.0498, coordExp)));   // log scale
         setLabel ('exp-val',      coordExp.toFixed(2));
-        setSlider('expimag-slider', coordExpImag);
+        setSlider('expimag-slider', _imagToPos(coordExpImag));   // two-segment scale
         setLabel ('expimag-val',    coordExpImag.toFixed(1));
         setSlider('cx-slider', coordCenterX);
         setLabel ('cx-val',    coordCenterX.toFixed(2));
