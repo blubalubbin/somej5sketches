@@ -621,10 +621,6 @@ function drawRGBViz() {
   const fp = sp[maxMagIdx];
   _vizLabel('r ' + maxMag.toFixed(2), fp[0] + 7, fp[1], LEFT, CENTER,
             over ? 255 : 205, over ? 255 : 218, over ? 255 : 240, (over ? 240 : 210) * A);
-  // Subtle title.
-  textSize(11);
-  _vizLabel('deformed sphere in RGB space', cx, cy + Math.min(width, height) * 0.30 + 40,
-            CENTER, BOTTOM, 210, 220, 235, 150 * A);
 
   pop();
 }
