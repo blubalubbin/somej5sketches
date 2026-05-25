@@ -90,6 +90,17 @@ When `cx=cy=cz=0` and `a=1, b=0` both pipelines produce identical output (the re
 
 The colour-axis labels in the sliders (red = X, green = Y, blue = Z) match the reference frame shown in the mini-sphere preview, where the rotation-equator ellipse (dashed yellow) visualises the great circle perpendicular to the current rotation axis.
 
+#### RGB-space overlay
+
+While a parameter is changing — dragged by hand or advanced by a ▶ play button — a 3D wireframe fades in over the render and relates the flat UV map back to a shape:
+
+- **Deformed sphere** — the unit sphere is sampled on a coarse grid and pushed through the warp (`centre → exponent → imaginary`) *without* the final renormalise step, so the points genuinely bulge away from a sphere.  Each vertex is drawn at its position and tinted with the exact pixel colour it produces — its normalised direction — so the cloud literally sits in RGB space.
+- **Unit axes** — fixed R/G/B arrows mark the colour-channel frame.
+- **Bounding box** — scales to the shape's actual extent, which grows or shrinks with the warp parameters; the caption reports the current half-extent.
+- **Orientation** — the rotation axis is drawn in yellow (invariant under the spin) and a white pole marker (the image of +Z) sweeps as the rotation offset advances, so the shape's orientation and its rotation about the axis settings are both visible.
+
+The overlay is purely informational and disappears about a second after the last change.
+
 ---
 
 ## Running locally
