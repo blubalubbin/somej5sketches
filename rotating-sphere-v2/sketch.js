@@ -19,6 +19,12 @@ let coordCenterZ = 0.0;
 // Replaces the raw mouseX-based offset.
 let rotOffset = 0.0;
 
+// Rotation parameterisation:
+//   'axis' — one rotation as axis-angle (rotOffset about the θ/φ axis).
+//   'rgb'  — three Euler rotations about the R/G/B (X/Y/Z) colour axes.
+let rotMode = 'axis';
+let rotR = 0.0, rotG = 0.0, rotB = 0.0;   // RGB-axis rotation angles (radians)
+
 // ── RGB-space overlay ────────────────────────────────────────────────
 // A 3D wireframe of the deformed sphere (the warped vector *before*
 // renormalisation) drawn over the render, but only while a parameter is
@@ -84,8 +90,12 @@ function windowResized() {
 }
 
 function draw() {
-  const theta = rotOffset;
-  buildRotationMatrix(RM, rotationVector, theta);
+  if (rotMode === 'rgb') {
+    buildRotationMatrixRGB(RM, rotR, rotG, rotB);
+    updateAxisFromRM();   // keep rotationVector + readout in sync for the overlay
+  } else {
+    buildRotationMatrix(RM, rotationVector, rotOffset);
+  }
   renderSphere(UVmap, RM, sphX, sphY, sphZ);
   image(UVmap, 0, 0);
   drawRGBViz();
@@ -122,10 +132,14 @@ function setCoordCenterX(val) { coordCenterX = parseFloat(val); _noteManual('cen
 function setCoordCenterY(val) { coordCenterY = parseFloat(val); _noteManual('centre', 'cy-slider'); }
 function setCoordCenterZ(val) { coordCenterZ = parseFloat(val); _noteManual('centre', 'cz-slider'); }
 function setRotOffset(val)    { rotOffset    = parseFloat(val); _noteManual('rot', 'rot-offset-slider'); }
+function setRotMode(mode)     { rotMode = (mode === 'rgb') ? 'rgb' : 'axis'; if (rotMode === 'axis') updateRotationVector(); noteParamChange(); }
+function setRotR(deg)         { rotR = deg * Math.PI / 180; noteParamChange(); }
+function setRotG(deg)         { rotG = deg * Math.PI / 180; noteParamChange(); }
+function setRotB(deg)         { rotB = deg * Math.PI / 180; noteParamChange(); }
 
 // ── Settings serialization ──────────────────────────────────────────
 function getSettings() {
-  return {
+  const s = {
     t:  +(axisTheta * 180 / Math.PI).toFixed(2),
     p:  +(axisPhi   * 180 / Math.PI).toFixed(2),
     a:  +coordExp.toFixed(3),
@@ -135,6 +149,15 @@ function getSettings() {
     cz: +coordCenterZ.toFixed(3),
     ro: +(rotOffset * 180 / Math.PI).toFixed(1),
   };
+  // Only emit RGB-rotation params when that mode is active, so axis-mode links
+  // stay unchanged (backward compatible).
+  if (rotMode === 'rgb') {
+    s.rmode = 'rgb';
+    s.rr = +(rotR * 180 / Math.PI).toFixed(1);
+    s.rg = +(rotG * 180 / Math.PI).toFixed(1);
+    s.rb = +(rotB * 180 / Math.PI).toFixed(1);
+  }
+  return s;
 }
 
 function encodeSettings() {
@@ -169,6 +192,10 @@ function applySettingsFromHash() {
   if ('cy' in s) coordCenterY = num(s.cy, coordCenterY);
   if ('cz' in s) coordCenterZ = num(s.cz, coordCenterZ);
   if ('ro' in s) rotOffset    = num(s.ro, rotOffset * 180 / Math.PI) * Math.PI / 180;
+  if ('rr' in s) rotR = num(s.rr, 0) * Math.PI / 180;
+  if ('rg' in s) rotG = num(s.rg, 0) * Math.PI / 180;
+  if ('rb' in s) rotB = num(s.rb, 0) * Math.PI / 180;
+  if ('rmode' in s) rotMode = (s.rmode === 'rgb') ? 'rgb' : 'axis';
 }
 
 // Real part of sign(v)·|v|^(a+ib).  At a=1, b=0 this is the identity.
@@ -185,6 +212,33 @@ function buildRotationMatrix(RM, RV, theta) {
   RM[0] = k*(c+x*x*t);   RM[1] = k*(x*y*t-z*s); RM[2] = k*(x*z*t+y*s);
   RM[3] = k*(y*x*t+z*s); RM[4] = k*(c+y*y*t);   RM[5] = k*(y*z*t-x*s);
   RM[6] = k*(z*x*t-y*s); RM[7] = k*(z*y*t+x*s); RM[8] = k*(c+z*z*t);
+}
+
+// Three Euler rotations about the R/G/B (X/Y/Z) axes, composed as Rz·Ry·Rx
+// (R applied first, then G, then B). Pre-scaled by 127.5 like buildRotationMatrix.
+function buildRotationMatrixRGB(M, aR, aG, aB) {
+  const ca = Math.cos(aR), sa = Math.sin(aR);
+  const cb = Math.cos(aG), sb = Math.sin(aG);
+  const cg = Math.cos(aB), sg = Math.sin(aB);
+  const k = 127.5;
+  M[0] = k*(cg*cb);            M[1] = k*(cg*sb*sa - sg*ca); M[2] = k*(cg*sb*ca + sg*sa);
+  M[3] = k*(sg*cb);            M[4] = k*(sg*sb*sa + cg*ca); M[5] = k*(sg*sb*ca - cg*sa);
+  M[6] = k*(-sb);              M[7] = k*(cb*sa);            M[8] = k*(cb*ca);
+}
+
+// Recover the equivalent single rotation axis from RM so the overlay's
+// rotation-axis indicator + readout stay meaningful in RGB mode.
+function updateAxisFromRM() {
+  let ax = RM[7] - RM[5];   // (r21 - r12), 127.5 scale cancels on normalise
+  let ay = RM[2] - RM[6];   // (r02 - r20)
+  let az = RM[3] - RM[1];   // (r10 - r01)
+  const len = Math.sqrt(ax*ax + ay*ay + az*az);
+  if (len > 1e-6) rotationVector.set(ax/len, ay/len, az/len);
+  const el = document.getElementById('axis-display');
+  if (el) {
+    const v = rotationVector;
+    el.textContent = `${v.x.toFixed(3)}, ${v.y.toFixed(3)}, ${v.z.toFixed(3)}`;
+  }
 }
 
 function buildCoordsVector(xs, ys, zs, meridiansCount, parallelsCount) {
