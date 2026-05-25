@@ -286,12 +286,16 @@ function drawRGBViz() {
     cb[i] = Math.max(0, Math.min(255, z/L*127.5 + 127.5));
   }
 
-  // Viewport scales to the actual bounds (≥1 so the unit axes always fit).
+  // Half-extent of the axis-aligned bounding box (reported in the caption).
   const half = Math.max(1, Math.abs(minx), Math.abs(maxx),
                            Math.abs(miny), Math.abs(maxy),
                            Math.abs(minz), Math.abs(maxz));
+  // Viewport scales to the max radius, not the bounding box. Radius is invariant
+  // under rotation (rotation preserves distance), so spinning the axis/offset
+  // doesn't change the on-screen size of a warped, non-spherical shape.
+  const fitR = Math.max(1, maxMag);
   const cx = width / 2, cy = height / 2;
-  const scl = (Math.min(width, height) * 0.30) / (half * 1.08);
+  const scl = (Math.min(width, height) * 0.30) / (fitR * 1.08);
 
   const cYaw = Math.cos(VIZ_VIEW_YAW),   sYaw = Math.sin(VIZ_VIEW_YAW);
   const cPit = Math.cos(VIZ_VIEW_PITCH), sPit = Math.sin(VIZ_VIEW_PITCH);
@@ -414,7 +418,7 @@ function drawRGBViz() {
   }
 
   // ── rotation axis (yellow; invariant under the spin) ──
-  const av = rotationVector, L = half * 0.98;
+  const av = rotationVector, L = fitR * 0.98;
   const ap = proj(av.x * L, av.y * L, av.z * L);
   const an = proj(-av.x * L, -av.y * L, -av.z * L);
   stroke(240, 210, 60, 200 * A); strokeWeight(1.6);
@@ -439,7 +443,7 @@ function drawRGBViz() {
   if (indAlpha.theta > 0.02) {
     const ta = A * indAlpha.theta;
     const ang = Math.acos(Math.max(-1, Math.min(1, av.z)));
-    const Rarc = 0.5 * half;
+    const Rarc = 0.5 * fitR;
     if (ang > 0.02) {
       const sa = Math.sin(ang), segs = 22;
       stroke(120, 225, 235, 235 * ta); strokeWeight(2);
@@ -462,7 +466,7 @@ function drawRGBViz() {
   // the axis tip: the compass heading the axis is swung around to.
   if (indAlpha.phi > 0.02) {
     const pa = A * indAlpha.phi;
-    const Rarc = 0.5 * half, phi = axisPhi;
+    const Rarc = 0.5 * fitR, phi = axisPhi;
     const segs = Math.max(8, Math.round(Math.abs(phi) / (Math.PI / 24)));
     stroke(235, 150, 235, 235 * pa); strokeWeight(2);
     let prev = null, prev2 = null, mid = null;
@@ -487,7 +491,7 @@ function drawRGBViz() {
   if (indAlpha.rot > 0.02) {
     const ra = A * indAlpha.rot;
     const basis = _perpBasis(av), u = basis[0], v = basis[1];
-    const Rs = 0.45 * half, sweep = 5.2, segs = 30, phase = rotOffset;
+    const Rs = 0.45 * fitR, sweep = 5.2, segs = 30, phase = rotOffset;
     stroke(245, 215, 70, 235 * ra); strokeWeight(2);
     let prev = null, prev2 = null, mid = null;
     for (let i = 0; i <= segs; i++) {
