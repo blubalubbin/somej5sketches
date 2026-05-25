@@ -453,9 +453,11 @@
           <div class="ctrl-row">
             <button class="reset-btn" onclick="resetSlider('exp-slider')">&#8634;</button>
             <span class="ctrl-label">Exponent (a)</span>
-            <input id="exp-slider" type="range" min="0.05" max="20" step="0.05" value="1"
-              oninput="setCoordExp(this.value);
-                       document.getElementById('exp-val').textContent=(+this.value).toFixed(2)">
+            <!-- Log scale: the slider value is ln(exponent), so the 0–1 range
+                 fills the left half (centre = exp 1) for fine low-end control. -->
+            <input id="exp-slider" type="range" min="-3" max="3" step="0.01" value="0"
+              oninput="setCoordExp(Math.exp(+this.value));
+                       document.getElementById('exp-val').textContent=Math.exp(+this.value).toFixed(2)">
             <span class="ctrl-value" id="exp-val">1.00</span>
             <button class="speed-play-btn" id="exp-slider-play-btn" onclick="toggleSliderSpeed('exp-slider')">▶</button>
           </div>
@@ -513,7 +515,7 @@
           <div class="ctrl-row">
             <button class="reset-btn" onclick="resetSlider('cx-slider')">&#8634;</button>
             <span class="ctrl-label" style="color:#f87;">Centre R</span>
-            <input id="cx-slider" type="range" min="-1" max="1" step="0.01" value="0"
+            <input id="cx-slider" type="range" min="-2" max="2" step="0.01" value="0"
               oninput="setCoordCenterX(this.value);
                        document.getElementById('cx-val').textContent=(+this.value).toFixed(2)">
             <span class="ctrl-value" id="cx-val">0.00</span>
@@ -531,7 +533,7 @@
           <div class="ctrl-row">
             <button class="reset-btn" onclick="resetSlider('cy-slider')">&#8634;</button>
             <span class="ctrl-label" style="color:#8d8;">Centre G</span>
-            <input id="cy-slider" type="range" min="-1" max="1" step="0.01" value="0"
+            <input id="cy-slider" type="range" min="-2" max="2" step="0.01" value="0"
               oninput="setCoordCenterY(this.value);
                        document.getElementById('cy-val').textContent=(+this.value).toFixed(2)">
             <span class="ctrl-value" id="cy-val">0.00</span>
@@ -549,7 +551,7 @@
           <div class="ctrl-row">
             <button class="reset-btn" onclick="resetSlider('cz-slider')">&#8634;</button>
             <span class="ctrl-label" style="color:#7cf;">Centre B</span>
-            <input id="cz-slider" type="range" min="-1" max="1" step="0.01" value="0"
+            <input id="cz-slider" type="range" min="-2" max="2" step="0.01" value="0"
               oninput="setCoordCenterZ(this.value);
                        document.getElementById('cz-val').textContent=(+this.value).toFixed(2)">
             <span class="ctrl-value" id="cz-val">0.00</span>
@@ -634,7 +636,7 @@
         'theta-slider':      54.7,
         'phi-slider':        45.0,
         'rot-offset-slider': 0,
-        'exp-slider':        1,
+        'exp-slider':        0,
         'expimag-slider':    0,
         'cx-slider':         0,
         'cy-slider':         0,
@@ -811,7 +813,7 @@
         'theta-slider':      0.5,
         'phi-slider':        0.75,
         'rot-offset-slider': 3,
-        'exp-slider':        0.1,
+        'exp-slider':        0.03,
         'expimag-slider':    0.5,
         'cx-slider':         0.012,
         'cy-slider':         0.012,
@@ -820,9 +822,10 @@
 
       // Per-slider oscillation bounds (lo/hi within the slider's full range).
       // Only exp-slider and expimag-slider have trim UI; others fall back to slider min/max.
+      // exp-slider is log-scaled, so its bounds are in ln(exponent) units (-3..3).
       const _oscBounds = {
-        'exp-slider':     { lo: 0.05, hi: 20   },
-        'expimag-slider': { lo: 0,    hi: 50   },
+        'exp-slider':     { lo: -3, hi: 3   },
+        'expimag-slider': { lo: 0,  hi: 50  },
       };
 
       function _getOscBounds(id) {
@@ -848,8 +851,12 @@
         if (hiEl)   hiEl.style.left   = (hiFrac * 100) + '%';
         if (fillEl) { fillEl.style.left = (loFrac * 100) + '%'; fillEl.style.width = ((hiFrac - loFrac) * 100) + '%'; }
         if (valEl) {
-          const dec = sliderId === 'exp-slider' ? 2 : 1;
-          valEl.textContent = bounds.lo.toFixed(dec) + ' – ' + bounds.hi.toFixed(dec);
+          if (sliderId === 'exp-slider') {
+            // Bounds are in ln(exponent) units; show the actual exponent range.
+            valEl.textContent = Math.exp(bounds.lo).toFixed(2) + ' – ' + Math.exp(bounds.hi).toFixed(2);
+          } else {
+            valEl.textContent = bounds.lo.toFixed(1) + ' – ' + bounds.hi.toFixed(1);
+          }
         }
       }
 
@@ -1457,7 +1464,7 @@
         setLabel ('phi-val',      pDeg.toFixed(1) + '°');
         setSlider('rot-offset-slider', (rotOffset * 180 / Math.PI).toFixed(0));
         setLabel ('rot-offset-val',    (rotOffset * 180 / Math.PI).toFixed(0) + '°');
-        setSlider('exp-slider',   coordExp);
+        setSlider('exp-slider',   Math.log(Math.max(0.0498, coordExp)));   // log scale
         setLabel ('exp-val',      coordExp.toFixed(2));
         setSlider('expimag-slider', coordExpImag);
         setLabel ('expimag-val',    coordExpImag.toFixed(1));
