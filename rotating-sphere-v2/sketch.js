@@ -19,6 +19,17 @@ let coordCenterZ = 0.0;
 // Replaces the raw mouseX-based offset.
 let rotOffset = 0.0;
 
+// ── RGB-space overlay ────────────────────────────────────────────────
+// A 3D wireframe of the deformed sphere (the warped vector *before*
+// renormalisation) drawn over the render, but only while a parameter is
+// being changed — manually or by an auto-cycling slider. Each vertex is
+// coloured by the exact pixel colour it produces (= its normalised
+// direction), so the shape literally sits in RGB space.
+let lastParamChange = -1e9;   // millis() of the last parameter mutation
+let vizAlpha        = 0;      // eased 0→1 visibility
+let vizBaseX, vizBaseY, vizBaseZ;   // precomputed unit-sphere sample grid
+const VIZ_MER = 18, VIZ_PAR = 36;   // overlay grid resolution (coarse)
+
 function setup() {
   createCanvas(windowWidth, windowHeight);
   pixelDensity(1);
@@ -26,6 +37,27 @@ function setup() {
   applySettingsFromHash();
   updateRotationVector();
   initBuffers();
+  buildVizGrid();
+}
+
+// Sample grid of unit-sphere normals used by the RGB-space overlay.
+function buildVizGrid() {
+  const N = VIZ_MER * VIZ_PAR;
+  vizBaseX = new Float32Array(N);
+  vizBaseY = new Float32Array(N);
+  vizBaseZ = new Float32Array(N);
+  let k = 0;
+  for (let j = 0; j < VIZ_MER; j++) {
+    const mer = Math.PI * j / (VIZ_MER - 1);
+    const sm = Math.sin(mer), cm = Math.cos(mer);
+    for (let i = 0; i < VIZ_PAR; i++) {
+      const par = (Math.PI * 2) * i / VIZ_PAR;
+      vizBaseX[k] = sm * Math.cos(par);
+      vizBaseY[k] = sm * Math.sin(par);
+      vizBaseZ[k] = cm;
+      k++;
+    }
+  }
 }
 
 function initBuffers() {
@@ -47,6 +79,7 @@ function draw() {
   buildRotationMatrix(RM, rotationVector, theta);
   renderSphere(UVmap, RM, sphX, sphY, sphZ);
   image(UVmap, 0, 0);
+  drawRGBViz();
 }
 
 function updateRotationVector() {
@@ -63,14 +96,15 @@ function updateRotationVector() {
   }
 }
 
-function setAxisTheta(deg)    { axisTheta    = deg * Math.PI / 180; updateRotationVector(); }
-function setAxisPhi(deg)      { axisPhi      = deg * Math.PI / 180; updateRotationVector(); }
-function setCoordExp(val)     { coordExp     = parseFloat(val); }
-function setCoordExpImag(val) { coordExpImag = parseFloat(val); }
-function setCoordCenterX(val) { coordCenterX = parseFloat(val); }
-function setCoordCenterY(val) { coordCenterY = parseFloat(val); }
-function setCoordCenterZ(val) { coordCenterZ = parseFloat(val); }
-function setRotOffset(val)    { rotOffset    = parseFloat(val); }
+function noteParamChange()   { lastParamChange = (typeof millis === 'function') ? millis() : 0; }
+function setAxisTheta(deg)    { axisTheta    = deg * Math.PI / 180; updateRotationVector(); noteParamChange(); }
+function setAxisPhi(deg)      { axisPhi      = deg * Math.PI / 180; updateRotationVector(); noteParamChange(); }
+function setCoordExp(val)     { coordExp     = parseFloat(val); noteParamChange(); }
+function setCoordExpImag(val) { coordExpImag = parseFloat(val); noteParamChange(); }
+function setCoordCenterX(val) { coordCenterX = parseFloat(val); noteParamChange(); }
+function setCoordCenterY(val) { coordCenterY = parseFloat(val); noteParamChange(); }
+function setCoordCenterZ(val) { coordCenterZ = parseFloat(val); noteParamChange(); }
+function setRotOffset(val)    { rotOffset    = parseFloat(val); noteParamChange(); }
 
 // ── Settings serialization ──────────────────────────────────────────
 function getSettings() {
@@ -182,5 +216,156 @@ function renderSphere(img, RM, xs, ys, zs) {
     pixels[p+3] = 255;
   }
   img.updatePixels();
+}
+
+// ── RGB-space overlay ────────────────────────────────────────────────
+// Fixed camera; the shape (and its body frame) rotate within it, so the
+// orientation set by the rotation axis + offset is visible. Fades in only
+// while a parameter is changing.
+const VIZ_HOLD_MS = 1100;   // keep visible this long after the last change
+const VIZ_VIEW_YAW   = -0.62;
+const VIZ_VIEW_PITCH =  0.52;
+
+function drawRGBViz() {
+  const now = (typeof millis === 'function') ? millis() : 0;
+  const target = (now - lastParamChange) < VIZ_HOLD_MS ? 1 : 0;
+  vizAlpha += (target - vizAlpha) * 0.16;
+  if (vizAlpha < 0.012) { if (target === 0) vizAlpha = 0; return; }
+  const A = vizAlpha;
+
+  // Unscaled rotation matrix (RM is the same rotation pre-scaled by 127.5).
+  const r00=RM[0]/127.5, r01=RM[1]/127.5, r02=RM[2]/127.5;
+  const r10=RM[3]/127.5, r11=RM[4]/127.5, r12=RM[5]/127.5;
+  const r20=RM[6]/127.5, r21=RM[7]/127.5, r22=RM[8]/127.5;
+
+  const a = coordExp, b = coordExpImag;
+  const cX = coordCenterX, cY = coordCenterY, cZ = coordCenterZ;
+  const N = vizBaseX.length;
+
+  // Transform every sample: warp → rotate (NO renormalise → keeps deformation).
+  const X = new Float64Array(N), Y = new Float64Array(N), Z = new Float64Array(N);
+  const cr = new Float64Array(N), cg = new Float64Array(N), cb = new Float64Array(N);
+  let minx=0, maxx=0, miny=0, maxy=0, minz=0, maxz=0;
+  for (let i = 0; i < N; i++) {
+    const wx = warpCoord(vizBaseX[i] - cX, a, b);
+    const wy = warpCoord(vizBaseY[i] - cY, a, b);
+    const wz = warpCoord(vizBaseZ[i] - cZ, a, b);
+    const x = r00*wx + r01*wy + r02*wz;
+    const y = r10*wx + r11*wy + r12*wz;
+    const z = r20*wx + r21*wy + r22*wz;
+    X[i]=x; Y[i]=y; Z[i]=z;
+    if (x<minx) minx=x; if (x>maxx) maxx=x;
+    if (y<miny) miny=y; if (y>maxy) maxy=y;
+    if (z<minz) minz=z; if (z>maxz) maxz=z;
+    // Colour = the pixel colour this sample produces (= its unit direction).
+    const L = Math.sqrt(x*x + y*y + z*z) || 1;
+    cr[i] = Math.max(0, Math.min(255, x/L*127.5 + 127.5));
+    cg[i] = Math.max(0, Math.min(255, y/L*127.5 + 127.5));
+    cb[i] = Math.max(0, Math.min(255, z/L*127.5 + 127.5));
+  }
+
+  // Viewport scales to the actual bounds (≥1 so the unit axes always fit).
+  const half = Math.max(1, Math.abs(minx), Math.abs(maxx),
+                           Math.abs(miny), Math.abs(maxy),
+                           Math.abs(minz), Math.abs(maxz));
+  const cx = width / 2, cy = height / 2;
+  const scl = (Math.min(width, height) * 0.30) / (half * 1.08);
+
+  const cYaw = Math.cos(VIZ_VIEW_YAW),   sYaw = Math.sin(VIZ_VIEW_YAW);
+  const cPit = Math.cos(VIZ_VIEW_PITCH), sPit = Math.sin(VIZ_VIEW_PITCH);
+  // Fixed orthographic camera. Returns [sx, sy, depth]; larger depth = farther.
+  const proj = (x, y, z) => {
+    const x1 = x*cYaw - y*sYaw;
+    const y1 = x*sYaw + y*cYaw;
+    const y2 = y1*cPit - z*sPit;
+    const z2 = y1*sPit + z*cPit;
+    return [cx + x1*scl, cy - z2*scl, y2];
+  };
+
+  push();
+  textFont('monospace');
+
+  // ── bounding box (actual parameter-dependent extent) ──
+  const corners = [];
+  for (const xi of [minx, maxx])
+    for (const yi of [miny, maxy])
+      for (const zi of [minz, maxz])
+        corners.push(proj(xi, yi, zi));
+  const edges = [[0,1],[0,2],[0,4],[1,3],[1,5],[2,3],[2,6],[3,7],[4,5],[4,6],[5,7],[6,7]];
+  stroke(130, 150, 180, 60 * A); strokeWeight(1);
+  for (const [u, v] of edges) line(corners[u][0], corners[u][1], corners[v][0], corners[v][1]);
+
+  // ── deformed sphere: depth-sorted coloured dots ──
+  const sp = new Array(N);
+  let dmin = Infinity, dmax = -Infinity;
+  for (let i = 0; i < N; i++) {
+    sp[i] = proj(X[i], Y[i], Z[i]);
+    const d = sp[i][2];
+    if (d < dmin) dmin = d;
+    if (d > dmax) dmax = d;
+  }
+  const dspan = (dmax - dmin) || 1;
+  const order = Array.from({length: N}, (_, i) => i).sort((p, q) => sp[q][2] - sp[p][2]);
+  for (const i of order) {
+    const s = sp[i];
+    const t = (s[2] - dmin) / dspan;   // 0 = nearest, 1 = farthest
+    const near = 1 - t;
+    stroke(0, 0, 0, 70 * A); strokeWeight(0.75);
+    fill(cr[i], cg[i], cb[i], (140 + 100 * near) * A);
+    circle(s[0], s[1], 2.6 + 2.4 * near);
+  }
+
+  // ── unit RGB axes (fixed colour-space frame) ──
+  const o = proj(0, 0, 0);
+  const axes = [
+    { e: proj(1, 0, 0), col: [255, 90, 90],  lbl: 'R' },
+    { e: proj(0, 1, 0), col: [90, 220, 120], lbl: 'G' },
+    { e: proj(0, 0, 1), col: [90, 150, 255], lbl: 'B' },
+  ];
+  textSize(14); textAlign(CENTER, CENTER);
+  for (const ax of axes) {
+    stroke(ax.col[0], ax.col[1], ax.col[2], 235 * A); strokeWeight(2.5);
+    line(o[0], o[1], ax.e[0], ax.e[1]);
+    _vizArrowHead(o, ax.e, ax.col, A);
+    noStroke(); fill(ax.col[0], ax.col[1], ax.col[2], 240 * A);
+    text(ax.lbl, ax.e[0] + (ax.e[0] - o[0]) * 0.13, ax.e[1] + (ax.e[1] - o[1]) * 0.13);
+  }
+
+  // ── rotation axis (yellow; invariant under the spin) ──
+  const av = rotationVector, L = half * 0.98;
+  const ap = proj(av.x * L, av.y * L, av.z * L);
+  const an = proj(-av.x * L, -av.y * L, -av.z * L);
+  stroke(240, 210, 60, 200 * A); strokeWeight(1.6);
+  line(an[0], an[1], ap[0], ap[1]);
+  _vizArrowHead(o, ap, [240, 210, 60], A);
+
+  // ── body pole (image of +Z): shows the spin/orientation ──
+  const pe = proj(r02 * 0.9, r12 * 0.9, r22 * 0.9);
+  stroke(255, 255, 255, 210 * A); strokeWeight(1.4);
+  line(o[0], o[1], pe[0], pe[1]);
+  noStroke(); fill(255, 255, 255, 225 * A); circle(pe[0], pe[1], 4.4);
+
+  // ── caption ──
+  noStroke(); textAlign(CENTER, BOTTOM); textSize(12);
+  fill(225, 230, 240, 200 * A);
+  text('deformed sphere in RGB space', cx, cy + Math.min(width, height) * 0.30 + 36);
+  fill(150, 160, 175, 180 * A); textSize(10);
+  text('bounds ±' + half.toFixed(2) + '   ·   colour = position direction',
+       cx, cy + Math.min(width, height) * 0.30 + 52);
+
+  pop();
+}
+
+function _vizArrowHead(from, to, col, A) {
+  const dx = to[0] - from[0], dy = to[1] - from[1];
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;
+  const sz = 7;
+  const bx = to[0] - ux * sz, by = to[1] - uy * sz;
+  const nx = -uy, ny = ux;
+  noStroke(); fill(col[0], col[1], col[2], 235 * A);
+  triangle(to[0], to[1],
+           bx + nx * sz * 0.5, by + ny * sz * 0.5,
+           bx - nx * sz * 0.5, by - ny * sz * 0.5);
 }
 
