@@ -86,9 +86,9 @@ When `cx=cy=cz=0` and `a=1, b=0` both pipelines produce identical output (the re
 
 | Slider | Effect |
 |--------|--------|
-| Centre X / Y / Z | Shifts the warp origin along each axis; colour bands migrate across the sphere surface as you drag |
+| Centre R / G / B | Shifts the warp origin along each colour-channel axis; colour bands migrate across the sphere surface as you drag |
 
-The colour-axis labels in the sliders (red = X, green = Y, blue = Z) match the reference frame shown in the mini-sphere preview, where the rotation-equator ellipse (dashed yellow) visualises the great circle perpendicular to the current rotation axis.
+The colour-coded centre sliders (R = red, G = green, B = blue) match the R/G/B reference frame shown in the RGB-space overlay.
 
 #### RGB-space overlay
 

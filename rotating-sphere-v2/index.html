@@ -455,7 +455,7 @@
         <div class="slider-group">
           <div class="ctrl-row">
             <button class="reset-btn" onclick="resetSlider('cx-slider')">&#8634;</button>
-            <span class="ctrl-label" style="color:#f87;">Centre X</span>
+            <span class="ctrl-label" style="color:#f87;">Centre R</span>
             <input id="cx-slider" type="range" min="-1" max="1" step="0.01" value="0"
               oninput="setCoordCenterX(this.value);
                        document.getElementById('cx-val').textContent=(+this.value).toFixed(2)">
@@ -473,7 +473,7 @@
         <div class="slider-group">
           <div class="ctrl-row">
             <button class="reset-btn" onclick="resetSlider('cy-slider')">&#8634;</button>
-            <span class="ctrl-label" style="color:#8d8;">Centre Y</span>
+            <span class="ctrl-label" style="color:#8d8;">Centre G</span>
             <input id="cy-slider" type="range" min="-1" max="1" step="0.01" value="0"
               oninput="setCoordCenterY(this.value);
                        document.getElementById('cy-val').textContent=(+this.value).toFixed(2)">
@@ -491,7 +491,7 @@
         <div class="slider-group">
           <div class="ctrl-row">
             <button class="reset-btn" onclick="resetSlider('cz-slider')">&#8634;</button>
-            <span class="ctrl-label" style="color:#7cf;">Centre Z</span>
+            <span class="ctrl-label" style="color:#7cf;">Centre B</span>
             <input id="cz-slider" type="range" min="-1" max="1" step="0.01" value="0"
               oninput="setCoordCenterZ(this.value);
                        document.getElementById('cz-val').textContent=(+this.value).toFixed(2)">
@@ -556,17 +556,17 @@
         'rot-offset-slider':     'Rotation — manually spins the sphere around its axis',
         'exp-slider':            'Exponent (a) — raises each surface coordinate to this power before colouring',
         'expimag-slider':        'Imaginary (b) — adds a spiral twist via complex exponentiation',
-        'cx-slider':             'Centre X — shifts the X origin before the warp is applied',
-        'cy-slider':             'Centre Y — shifts the Y origin before the warp is applied',
-        'cz-slider':             'Centre Z — shifts the Z origin before the warp is applied',
+        'cx-slider':             'Centre R — shifts the origin along the red (R) axis before the warp is applied',
+        'cy-slider':             'Centre G — shifts the origin along the green (G) axis before the warp is applied',
+        'cz-slider':             'Centre B — shifts the origin along the blue (B) axis before the warp is applied',
         'theta-slider-speed':    'Speed: auto-rotates polar angle (θ) continuously',
         'phi-slider-speed':      'Speed: auto-rotates azimuth (φ) continuously',
         'rot-offset-slider-speed':'Speed: continuously spins the sphere',
         'exp-slider-speed':      'Speed: cycles exponent (a) within its trim range',
         'expimag-slider-speed':  'Speed: cycles imaginary (b) within its trim range',
-        'cx-slider-speed':       'Speed: oscillates Centre X',
-        'cy-slider-speed':       'Speed: oscillates Centre Y',
-        'cz-slider-speed':       'Speed: oscillates Centre Z',
+        'cx-slider-speed':       'Speed: oscillates Centre R',
+        'cy-slider-speed':       'Speed: oscillates Centre G',
+        'cz-slider-speed':       'Speed: oscillates Centre B',
       };
 
       (function () {
@@ -1203,9 +1203,9 @@
         row('rotation', (rotOffset * 180 / Math.PI).toFixed(1) + '°');
         row('exp a',      coordExp.toFixed(2));
         row('exp b',      coordExpImag.toFixed(1));
-        row('centre x',   coordCenterX.toFixed(2));
-        row('centre y',   coordCenterY.toFixed(2));
-        row('centre z',   coordCenterZ.toFixed(2));
+        row('centre R',   coordCenterX.toFixed(2));
+        row('centre G',   coordCenterY.toFixed(2));
+        row('centre B',   coordCenterZ.toFixed(2));
 
         try {
           ctx.font = '12px monospace';
