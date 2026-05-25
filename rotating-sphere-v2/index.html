@@ -783,9 +783,8 @@
       }
 
       function resetAll() {
+        // Resets slider values only; the active rotation mode is left as-is.
         for (const id of Object.keys(_sliderDefaults)) resetSlider(id);
-        if (typeof setRotMode === 'function') setRotMode('axis');
-        _applyRotModeUI();
       }
 
       // ── Rotation mode toggle (axis-angle ↔ three RGB-axis rotations) ─────
