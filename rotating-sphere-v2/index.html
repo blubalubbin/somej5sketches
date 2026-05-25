@@ -270,6 +270,73 @@
       }
       #toast.show { opacity: 1; }
 
+      /* ── Glassy parameter tip: big transparent text the colourful canvas
+            shows through; fades in on manual interaction, out when idle ── */
+      #tip-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 6;                 /* above canvas, below the HUD/controls */
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: clamp(1.25rem, 5vw, 4rem);
+        opacity: 0;
+        transition: opacity 240ms ease;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      }
+      #tip-overlay.show { opacity: 1; }
+
+      .tip-eyebrow {
+        font-size: clamp(0.7rem, 1.5vw, 1rem);
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: rgba(255,255,255,0.78);
+        text-shadow: 0 1px 8px rgba(0,0,0,0.55);
+        margin-bottom: 0.5rem;
+      }
+      /* The headline is mostly transparent so the colourful canvas reads
+         straight through the letterforms; an SVG displacement filter bends the
+         glass rim like a lens (true backdrop refraction isn't supported in
+         Safari, so we refract the glyph edges instead). */
+      .tip-headline {
+        font-size: clamp(2.4rem, 9vw, 7rem);
+        font-weight: 800;
+        line-height: 0.98;
+        letter-spacing: -0.02em;
+        margin: 0 0 0.55rem;
+        color: rgba(255,255,255,0.14);
+        -webkit-text-stroke: 1.4px rgba(255,255,255,0.72);
+        text-stroke: 1.4px rgba(255,255,255,0.72);
+        paint-order: stroke fill;
+        filter: url(#glass-liquid) drop-shadow(0 3px 22px rgba(0,0,0,0.5));
+      }
+      .tip-lead {
+        font-size: clamp(1.05rem, 2.6vw, 1.9rem);
+        font-weight: 600;
+        line-height: 1.25;
+        max-width: 24ch;
+        color: rgba(255,255,255,0.94);
+        text-shadow: 0 2px 14px rgba(0,0,0,0.7);
+        margin-bottom: 0.7rem;
+      }
+      .tip-note {
+        font-size: clamp(0.92rem, 1.9vw, 1.2rem);
+        line-height: 1.5;
+        max-width: 48ch;
+        color: rgba(228,234,245,0.88);
+        text-shadow: 0 1px 11px rgba(0,0,0,0.8);
+      }
+      .tip-note strong { color: #fff; font-weight: 700; }
+
+      /* toggled-on state for a controls-panel toggle button (e.g. Tips) */
+      .speed-play-btn.toggled-on {
+        color: #cfe3ff;
+        border-color: #7aa7d8;
+        background: rgba(120,160,220,0.14);
+      }
+
       /* ── Slider cycle animations ── */
       /* Slider pill squishes and pops on wrap-around */
       @keyframes _slider-wrap-pop {
@@ -330,7 +397,8 @@
       <div id="controls-panel">
         <div class="ctrl-row" style="margin-bottom:0.75rem;">
           <button class="speed-play-btn" onclick="resetAll()">&#8634; Reset all</button>
-          <button class="speed-play-btn" id="viz-mode-btn" onclick="toggleVizSurface()">&#9679; Dots</button>
+          <button class="speed-play-btn" id="viz-mode-btn" onclick="toggleVizSurface()">&#9638; Surface</button>
+          <button class="speed-play-btn" id="tips-btn" onclick="toggleTips()">&#128161; Tips</button>
           <div style="flex:1"></div>
           <button class="speed-play-btn" id="pause-all-btn" onclick="toggleAllPlay()">&#9654; Play all</button>
         </div>
@@ -512,6 +580,20 @@
     </div>
     <div id="toast" role="status" aria-live="polite"></div>
 
+    <svg width="0" height="0" aria-hidden="true" style="position:absolute;pointer-events:none">
+      <filter id="glass-liquid" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+        <feTurbulence type="fractalNoise" baseFrequency="0.007 0.013" numOctaves="2" seed="11" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="16" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </svg>
+
+    <div id="tip-overlay" aria-hidden="true">
+      <div class="tip-eyebrow" id="tip-eyebrow"></div>
+      <div class="tip-headline" id="tip-headline"></div>
+      <div class="tip-lead" id="tip-lead"></div>
+      <div class="tip-note" id="tip-note"></div>
+    </div>
+
     <script>
       function toggleControls() {
         const open = document.getElementById('controls-panel').classList.toggle('open');
@@ -627,7 +709,9 @@
         const slider = document.getElementById(targetId);
         if (!slider) return;
         slider.value = def;
+        _suppressTips = true;
         slider.dispatchEvent(new Event('input', { bubbles: true }));
+        _suppressTips = false;
         // Reset speed to zero.
         const speedSlider = document.getElementById(targetId + '-speed');
         if (speedSlider) speedSlider.value = 0;
@@ -653,6 +737,91 @@
         // Reveal the overlay briefly so the change is visible immediately.
         if (typeof noteParamChange === 'function') noteParamChange();
       }
+
+      // ── Glassy parameter tips ───────────────────────────────────────────
+      // Big transparent text explaining the control you're touching and how to
+      // read the helper numbers (bounds vs |RGB|). Manual edits only; on by
+      // default; toggleable. Suppressed during auto-cycling and programmatic
+      // resets so it only reacts to hands-on changes.
+      let tipsEnabled = localStorage.getItem('sphere-v2-tips') !== '0';
+      let _suppressTips = false;
+      let _tipTimer = null;
+
+      const _tipInfo = {
+        'rot-offset-slider': {
+          eyebrow: 'Rotation', headline: 'Spin',
+          lead: 'Turns the whole shape about its axis.',
+          note: 'Every surface colour rotates together — each point’s hue is its <strong>direction</strong> after the spin.'
+        },
+        'theta-slider': {
+          eyebrow: 'Rotation axis', headline: 'Polar θ',
+          lead: 'Tilts the axis away from the blue (up) axis.',
+          note: '0° points straight up the B axis; 90° lays it flat. The cyan arc in the overlay shows the tilt.'
+        },
+        'phi-slider': {
+          eyebrow: 'Rotation axis', headline: 'Azimuth φ',
+          lead: 'Swings the axis around the up axis — its compass heading.',
+          note: 'Like a clock face seen from above; the magenta arc sweeps round from the R axis.'
+        },
+        'exp-slider': {
+          eyebrow: 'Colour warp', headline: 'Exponent',
+          lead: 'Bends each coordinate before it becomes a colour.',
+          note: 'Large values push points far outside the unit sphere, so <strong>bounds</strong> — how far the shape reaches — grows, and overshooting points get a white highlight.'
+        },
+        'expimag-slider': {
+          eyebrow: 'Colour warp', headline: 'Imaginary',
+          lead: 'Adds spiralling colour bands.',
+          note: 'Complex exponentiation twists the bands around the shape.'
+        },
+        'cx-slider': { eyebrow: 'Centre offset', headline: 'Centre R',
+          lead: 'Shifts the warp’s origin along the red axis, inside the colour cube.',
+          note: '<strong>|RGB|</strong> is how far you’ve shifted the origin — different from <strong>bounds</strong>, which is how far the warped shape itself reaches in colour space.' },
+        'cy-slider': { eyebrow: 'Centre offset', headline: 'Centre G',
+          lead: 'Shifts the warp’s origin along the green axis, inside the colour cube.',
+          note: '<strong>|RGB|</strong> is how far you’ve shifted the origin — different from <strong>bounds</strong>, which is how far the warped shape itself reaches in colour space.' },
+        'cz-slider': { eyebrow: 'Centre offset', headline: 'Centre B',
+          lead: 'Shifts the warp’s origin along the blue axis, inside the colour cube.',
+          note: '<strong>|RGB|</strong> is how far you’ve shifted the origin — different from <strong>bounds</strong>, which is how far the warped shape itself reaches in colour space.' },
+      };
+
+      function _showTip(id) {
+        if (!tipsEnabled || _suppressTips) return;
+        const info = _tipInfo[id];
+        if (!info) return;
+        // Manual only: skip if this slider is currently auto-cycling.
+        if (typeof _sliderSpeeds !== 'undefined' && _sliderSpeeds[id]) return;
+        document.getElementById('tip-eyebrow').textContent = info.eyebrow;
+        document.getElementById('tip-headline').textContent = info.headline;
+        document.getElementById('tip-lead').textContent = info.lead;
+        document.getElementById('tip-note').innerHTML = info.note;
+        const o = document.getElementById('tip-overlay');
+        o.classList.add('show');
+        clearTimeout(_tipTimer);
+        _tipTimer = setTimeout(() => o.classList.remove('show'), 2800);
+      }
+
+      function _syncTipsBtn() {
+        const b = document.getElementById('tips-btn');
+        if (b) b.classList.toggle('toggled-on', tipsEnabled);
+      }
+
+      function toggleTips() {
+        tipsEnabled = !tipsEnabled;
+        localStorage.setItem('sphere-v2-tips', tipsEnabled ? '1' : '0');
+        _syncTipsBtn();
+        if (!tipsEnabled) {
+          const o = document.getElementById('tip-overlay');
+          if (o) o.classList.remove('show');
+        }
+      }
+
+      window.addEventListener('load', () => {
+        _syncTipsBtn();
+        document.getElementById('controls-panel').addEventListener('input', e => {
+          const el = e.target.closest('input[type="range"]');
+          if (el) _showTip(el.id);
+        });
+      });
 
       function toggleHudMinimise() {
         const hud = document.getElementById('hud');
