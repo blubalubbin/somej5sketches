@@ -35,6 +35,9 @@ const VIZ_MER = 18, VIZ_PAR = 36;   // overlay grid resolution (coarse)
 // indicators stay tied to "you are dragging this control right now".
 let manualChange = { theta: -1e9, phi: -1e9, rot: -1e9, centre: -1e9 };
 let indAlpha     = { theta: 0, phi: 0, rot: 0, centre: 0 };
+// Overlay render style: false = individual dots, true = filled surface mesh.
+let vizSurface = false;
+function setVizSurface(on) { vizSurface = !!on; }
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -309,7 +312,7 @@ function drawRGBViz() {
   stroke(130, 150, 180, 60 * A); strokeWeight(1);
   for (const [u, v] of edges) line(corners[u][0], corners[u][1], corners[v][0], corners[v][1]);
 
-  // ── deformed sphere: depth-sorted coloured dots ──
+  // ── deformed sphere ──
   const sp = new Array(N);
   let dmin = Infinity, dmax = -Infinity;
   for (let i = 0; i < N; i++) {
@@ -319,14 +322,40 @@ function drawRGBViz() {
     if (d > dmax) dmax = d;
   }
   const dspan = (dmax - dmin) || 1;
-  const order = Array.from({length: N}, (_, i) => i).sort((p, q) => sp[q][2] - sp[p][2]);
-  for (const i of order) {
-    const s = sp[i];
-    const t = (s[2] - dmin) / dspan;   // 0 = nearest, 1 = farthest
-    const near = 1 - t;
-    stroke(0, 0, 0, 70 * A); strokeWeight(0.75);
-    fill(cr[i], cg[i], cb[i], (140 + 100 * near) * A);
-    circle(s[0], s[1], 2.6 + 2.4 * near);
+
+  if (vizSurface) {
+    // Filled mesh: stitch adjacent grid samples into depth-sorted quads.
+    const quads = [];
+    for (let j = 0; j < VIZ_MER - 1; j++) {
+      for (let i = 0; i < VIZ_PAR; i++) {
+        const i2 = (i + 1) % VIZ_PAR;
+        const a = j * VIZ_PAR + i,        b = j * VIZ_PAR + i2;
+        const c = (j + 1) * VIZ_PAR + i2, d = (j + 1) * VIZ_PAR + i;
+        quads.push([a, b, c, d, (sp[a][2] + sp[b][2] + sp[c][2] + sp[d][2]) * 0.25]);
+      }
+    }
+    quads.sort((p, q) => q[4] - p[4]);   // far first
+    for (const [a, b, c, d, depth] of quads) {
+      const near = 1 - (depth - dmin) / dspan;
+      const sh = 0.65 + 0.35 * near;     // dim the far side slightly for form
+      const rr = (cr[a] + cr[b] + cr[c] + cr[d]) * 0.25 * sh;
+      const gg = (cg[a] + cg[b] + cg[c] + cg[d]) * 0.25 * sh;
+      const bb = (cb[a] + cb[b] + cb[c] + cb[d]) * 0.25 * sh;
+      // Stroke == fill closes anti-aliasing seams so it reads as one surface.
+      stroke(rr, gg, bb, 230 * A); strokeWeight(1);
+      fill(rr, gg, bb, 230 * A);
+      quad(sp[a][0], sp[a][1], sp[b][0], sp[b][1], sp[c][0], sp[c][1], sp[d][0], sp[d][1]);
+    }
+  } else {
+    // Individual depth-sorted coloured dots.
+    const order = Array.from({length: N}, (_, i) => i).sort((p, q) => sp[q][2] - sp[p][2]);
+    for (const i of order) {
+      const s = sp[i];
+      const near = 1 - (s[2] - dmin) / dspan;   // 1 = nearest, 0 = farthest
+      stroke(0, 0, 0, 70 * A); strokeWeight(0.75);
+      fill(cr[i], cg[i], cb[i], (140 + 100 * near) * A);
+      circle(s[0], s[1], 2.6 + 2.4 * near);
+    }
   }
 
   // ── unit RGB axes (fixed colour-space frame) ──

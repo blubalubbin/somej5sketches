@@ -330,6 +330,7 @@
       <div id="controls-panel">
         <div class="ctrl-row" style="margin-bottom:0.75rem;">
           <button class="speed-play-btn" onclick="resetAll()">&#8634; Reset all</button>
+          <button class="speed-play-btn" id="viz-mode-btn" onclick="toggleVizSurface()">&#9679; Dots</button>
           <div style="flex:1"></div>
           <button class="speed-play-btn" id="pause-all-btn" onclick="toggleAllPlay()">&#9654; Play all</button>
         </div>
@@ -641,6 +642,16 @@
 
       function resetAll() {
         for (const id of Object.keys(_sliderDefaults)) resetSlider(id);
+      }
+
+      // Toggle the RGB-space overlay between individual dots and a filled surface.
+      function toggleVizSurface() {
+        const on = (typeof vizSurface !== 'undefined') ? !vizSurface : true;
+        if (typeof setVizSurface === 'function') setVizSurface(on);
+        const btn = document.getElementById('viz-mode-btn');
+        if (btn) btn.innerHTML = on ? '&#9638; Surface' : '&#9679; Dots';
+        // Reveal the overlay briefly so the change is visible immediately.
+        if (typeof noteParamChange === 'function') noteParamChange();
       }
 
       function toggleHudMinimise() {
