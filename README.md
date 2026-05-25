@@ -99,6 +99,13 @@ While a parameter is changing — dragged by hand or advanced by a ▶ play butt
 - **Bounding box** — scales to the shape's actual extent, which grows or shrinks with the warp parameters; the caption reports the current half-extent.
 - **Orientation** — the rotation axis is drawn in yellow (invariant under the spin) and a white pole marker (the image of +Z) sweeps as the rotation offset advances, so the shape's orientation and its rotation about the axis settings are both visible.
 
+While a single control is **dragged by hand**, an extra indicator for that parameter fades in to make it intuitive (these stay hidden during auto-cycling, since they track manual edits):
+
+- **Polar θ** — a cyan arc from the +Z (blue / up) axis to the rotation axis, showing the tilt away from vertical.
+- **Azimuth φ** — a magenta arc swept around the XY equator from +X, with a drop line from the axis tip, showing the compass heading.
+- **Rotation** — a yellow circular arrow swirling around the axis, whose phase tracks the offset.
+- **Centre offset** — red/green/blue component legs plus a resultant arrow and `|offset|` magnitude, showing the distance and direction from the origin.
+
 The overlay is purely informational and disappears about a second after the last change.
 
 ---

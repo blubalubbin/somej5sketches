@@ -29,6 +29,12 @@ let lastParamChange = -1e9;   // millis() of the last parameter mutation
 let vizAlpha        = 0;      // eased 0→1 visibility
 let vizBaseX, vizBaseY, vizBaseZ;   // precomputed unit-sphere sample grid
 const VIZ_MER = 18, VIZ_PAR = 36;   // overlay grid resolution (coarse)
+// Per-parameter manual-change timestamps + eased visibility for the intuition
+// indicators (polar/azimuth arcs, rotation swirl, centre-offset vector).
+// Only manual edits set these — auto-cycling sliders deliberately don't, so the
+// indicators stay tied to "you are dragging this control right now".
+let manualChange = { theta: -1e9, phi: -1e9, rot: -1e9, centre: -1e9 };
+let indAlpha     = { theta: 0, phi: 0, rot: 0, centre: 0 };
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -97,14 +103,22 @@ function updateRotationVector() {
 }
 
 function noteParamChange()   { lastParamChange = (typeof millis === 'function') ? millis() : 0; }
-function setAxisTheta(deg)    { axisTheta    = deg * Math.PI / 180; updateRotationVector(); noteParamChange(); }
-function setAxisPhi(deg)      { axisPhi      = deg * Math.PI / 180; updateRotationVector(); noteParamChange(); }
+// Bump the global overlay timer, and the per-indicator timer too — unless that
+// slider is currently auto-cycling (in which case the change isn't "manual").
+function _noteManual(key, sliderId) {
+  const t = (typeof millis === 'function') ? millis() : 0;
+  lastParamChange = t;
+  const playing = (typeof _sliderSpeeds !== 'undefined') && _sliderSpeeds[sliderId];
+  if (!playing) manualChange[key] = t;
+}
+function setAxisTheta(deg)    { axisTheta    = deg * Math.PI / 180; updateRotationVector(); _noteManual('theta', 'theta-slider'); }
+function setAxisPhi(deg)      { axisPhi      = deg * Math.PI / 180; updateRotationVector(); _noteManual('phi',   'phi-slider'); }
 function setCoordExp(val)     { coordExp     = parseFloat(val); noteParamChange(); }
 function setCoordExpImag(val) { coordExpImag = parseFloat(val); noteParamChange(); }
-function setCoordCenterX(val) { coordCenterX = parseFloat(val); noteParamChange(); }
-function setCoordCenterY(val) { coordCenterY = parseFloat(val); noteParamChange(); }
-function setCoordCenterZ(val) { coordCenterZ = parseFloat(val); noteParamChange(); }
-function setRotOffset(val)    { rotOffset    = parseFloat(val); noteParamChange(); }
+function setCoordCenterX(val) { coordCenterX = parseFloat(val); _noteManual('centre', 'cx-slider'); }
+function setCoordCenterY(val) { coordCenterY = parseFloat(val); _noteManual('centre', 'cy-slider'); }
+function setCoordCenterZ(val) { coordCenterZ = parseFloat(val); _noteManual('centre', 'cz-slider'); }
+function setRotOffset(val)    { rotOffset    = parseFloat(val); _noteManual('rot', 'rot-offset-slider'); }
 
 // ── Settings serialization ──────────────────────────────────────────
 function getSettings() {
@@ -345,6 +359,100 @@ function drawRGBViz() {
   line(o[0], o[1], pe[0], pe[1]);
   noStroke(); fill(255, 255, 255, 225 * A); circle(pe[0], pe[1], 4.4);
 
+  // ── per-parameter intuition indicators (manual edits only) ──
+  const _indTarget = k => (now - manualChange[k] < VIZ_HOLD_MS) ? 1 : 0;
+  indAlpha.theta  += (_indTarget('theta')  - indAlpha.theta ) * 0.18;
+  indAlpha.phi    += (_indTarget('phi')    - indAlpha.phi   ) * 0.18;
+  indAlpha.rot    += (_indTarget('rot')    - indAlpha.rot   ) * 0.18;
+  indAlpha.centre += (_indTarget('centre') - indAlpha.centre) * 0.18;
+  textSize(12);
+
+  // Polar θ — arc from the +Z (blue/up) axis to the rotation axis: the tilt.
+  if (indAlpha.theta > 0.02) {
+    const ta = A * indAlpha.theta;
+    const ang = Math.acos(Math.max(-1, Math.min(1, av.z)));
+    const Rarc = 0.5 * half;
+    if (ang > 0.02) {
+      const sa = Math.sin(ang), segs = 22;
+      stroke(120, 225, 235, 235 * ta); strokeWeight(2);
+      let prev = null, prev2 = null, mid = null;
+      for (let i = 0; i <= segs; i++) {
+        const t = i / segs;
+        const w0 = Math.sin((1 - t) * ang) / sa, w1 = Math.sin(t * ang) / sa;
+        const s2 = proj(w1 * av.x * Rarc, w1 * av.y * Rarc, (w0 + w1 * av.z) * Rarc);
+        if (prev) line(prev[0], prev[1], s2[0], s2[1]);
+        if (i === (segs >> 1)) mid = s2;
+        prev2 = prev; prev = s2;
+      }
+      if (prev2) _vizArrowHead(prev2, prev, [120, 225, 235], ta);
+      if (mid) { noStroke(); fill(160, 232, 242, 240 * ta); textAlign(CENTER, BOTTOM);
+                 text('θ ' + (axisTheta * 180 / Math.PI).toFixed(0) + '°', mid[0], mid[1] - 4); }
+    }
+  }
+
+  // Azimuth φ — arc in the XY (equator) plane from +X, with a drop line from
+  // the axis tip: the compass heading the axis is swung around to.
+  if (indAlpha.phi > 0.02) {
+    const pa = A * indAlpha.phi;
+    const Rarc = 0.5 * half, phi = axisPhi;
+    const segs = Math.max(8, Math.round(Math.abs(phi) / (Math.PI / 24)));
+    stroke(235, 150, 235, 235 * pa); strokeWeight(2);
+    let prev = null, prev2 = null, mid = null;
+    for (let i = 0; i <= segs; i++) {
+      const an = phi * (i / segs);
+      const s2 = proj(Math.cos(an) * Rarc, Math.sin(an) * Rarc, 0);
+      if (prev) line(prev[0], prev[1], s2[0], s2[1]);
+      if (i === (segs >> 1)) mid = s2;
+      prev2 = prev; prev = s2;
+    }
+    if (prev2) _vizArrowHead(prev2, prev, [235, 150, 235], pa);
+    const tip = proj(av.x * Rarc, av.y * Rarc, av.z * Rarc);
+    const tipXY = proj(av.x * Rarc, av.y * Rarc, 0);
+    stroke(235, 150, 235, 110 * pa); strokeWeight(1);
+    line(tip[0], tip[1], tipXY[0], tipXY[1]);
+    if (mid) { noStroke(); fill(240, 170, 240, 240 * pa); textAlign(CENTER, TOP);
+               text('φ ' + (axisPhi * 180 / Math.PI).toFixed(0) + '°', mid[0], mid[1] + 4); }
+  }
+
+  // Rotation — a circular arrow swirling around the axis; phase = the offset,
+  // so the whole swirl spins as you drag the rotation.
+  if (indAlpha.rot > 0.02) {
+    const ra = A * indAlpha.rot;
+    const basis = _perpBasis(av), u = basis[0], v = basis[1];
+    const Rs = 0.45 * half, sweep = 5.2, segs = 30, phase = rotOffset;
+    stroke(245, 215, 70, 235 * ra); strokeWeight(2);
+    let prev = null, prev2 = null, mid = null;
+    for (let i = 0; i <= segs; i++) {
+      const al = phase + sweep * (i / segs);
+      const c = Math.cos(al), s = Math.sin(al);
+      const s2 = proj((c*u[0]+s*v[0])*Rs, (c*u[1]+s*v[1])*Rs, (c*u[2]+s*v[2])*Rs);
+      if (prev) line(prev[0], prev[1], s2[0], s2[1]);
+      if (i === (segs >> 1)) mid = s2;
+      prev2 = prev; prev = s2;
+    }
+    if (prev2) _vizArrowHead(prev2, prev, [245, 215, 70], ra);
+    if (mid) { noStroke(); fill(248, 222, 96, 240 * ra); textAlign(CENTER, CENTER);
+               text((rotOffset * 180 / Math.PI).toFixed(0) + '°', mid[0], mid[1]); }
+  }
+
+  // Centre offset — R/G/B component legs + resultant arrow + magnitude.
+  if (indAlpha.centre > 0.02) {
+    const ca = A * indAlpha.centre;
+    const ox = coordCenterX, oy = coordCenterY, oz = coordCenterZ;
+    const mag = Math.sqrt(ox*ox + oy*oy + oz*oz);
+    const pX = proj(ox, 0, 0), pXY = proj(ox, oy, 0), pEnd = proj(ox, oy, oz);
+    strokeWeight(1.5);
+    stroke(255, 120, 120, 170 * ca); line(o[0], o[1], pX[0], pX[1]);
+    stroke(120, 230, 140, 170 * ca); line(pX[0], pX[1], pXY[0], pXY[1]);
+    stroke(120, 170, 255, 170 * ca); line(pXY[0], pXY[1], pEnd[0], pEnd[1]);
+    stroke(245, 245, 250, 235 * ca); strokeWeight(2);
+    line(o[0], o[1], pEnd[0], pEnd[1]);
+    if (mag > 1e-4) _vizArrowHead(o, pEnd, [245, 245, 250], ca);
+    noStroke(); fill(245, 245, 250, 235 * ca); circle(pEnd[0], pEnd[1], 4.6);
+    fill(235, 238, 245, 232 * ca); textAlign(LEFT, CENTER);
+    text('|offset| ' + mag.toFixed(2), pEnd[0] + 9, pEnd[1]);
+  }
+
   // ── caption ──
   noStroke(); textAlign(CENTER, BOTTOM); textSize(12);
   fill(225, 230, 240, 200 * A);
@@ -354,6 +462,16 @@ function drawRGBViz() {
        cx, cy + Math.min(width, height) * 0.30 + 52);
 
   pop();
+}
+
+// Two orthonormal vectors spanning the plane perpendicular to a unit axis.
+function _perpBasis(ax) {
+  let rx = 0, ry = 0, rz = 1;
+  if (Math.abs(ax.z) > 0.9) { rx = 1; rz = 0; }
+  let ux = ax.y*rz - ax.z*ry, uy = ax.z*rx - ax.x*rz, uz = ax.x*ry - ax.y*rx;
+  const ul = Math.hypot(ux, uy, uz) || 1; ux /= ul; uy /= ul; uz /= ul;
+  const vx = ax.y*uz - ax.z*uy, vy = ax.z*ux - ax.x*uz, vz = ax.x*uy - ax.y*ux;
+  return [[ux, uy, uz], [vx, vy, vz]];
 }
 
 function _vizArrowHead(from, to, col, A) {
