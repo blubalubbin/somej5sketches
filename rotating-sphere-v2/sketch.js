@@ -532,23 +532,22 @@ function drawRGBViz() {
     fill(235, 238, 245, 235 * ca); text('|RGB| ' + cmag.toFixed(2), pEnd[0] + 9, ly);
   }
 
-  // ── subtle annotations ──
-  noStroke(); textSize(10);
-  // Bounds: tucked against the far-top corner of the bounding box, so it
-  // rides along as the box changes shape.
+  // ── subtle annotations (with a dark shadow so they read over the render) ──
+  noStroke(); textSize(11);
+  // Bounds: tucked against the far corner of the bounding box, so it rides
+  // along as the box changes shape.
   const bc = corners[7];   // (maxx, maxy, maxz) corner
-  fill(150, 165, 195, 95 * A); textAlign(LEFT, BOTTOM);
-  text('±' + half.toFixed(2), bc[0] + 6, bc[1] - 4);
+  _vizLabel('±' + half.toFixed(2), bc[0] + 6, bc[1] - 4, LEFT, BOTTOM, 205, 218, 240, 215 * A);
   // Max radius: printed next to the single furthest-out point; brightens when
   // it pushes past the unit sphere.
   const over = maxMag > VIZ_UNIT_TOL;
   const fp = sp[maxMagIdx];
-  fill(over ? 255 : 150, over ? 255 : 165, over ? 255 : 195, (over ? 150 : 105) * A);
-  textAlign(LEFT, CENTER);
-  text('r ' + maxMag.toFixed(2), fp[0] + 7, fp[1]);
+  _vizLabel('r ' + maxMag.toFixed(2), fp[0] + 7, fp[1], LEFT, CENTER,
+            over ? 255 : 205, over ? 255 : 218, over ? 255 : 240, (over ? 240 : 210) * A);
   // Subtle title.
-  fill(200, 210, 225, 80 * A); textAlign(CENTER, BOTTOM); textSize(11);
-  text('deformed sphere in RGB space', cx, cy + Math.min(width, height) * 0.30 + 40);
+  textSize(11);
+  _vizLabel('deformed sphere in RGB space', cx, cy + Math.min(width, height) * 0.30 + 40,
+            CENTER, BOTTOM, 210, 220, 235, 150 * A);
 
   pop();
 }
@@ -561,6 +560,15 @@ function _perpBasis(ax) {
   const ul = Math.hypot(ux, uy, uz) || 1; ux /= ul; uy /= ul; uz /= ul;
   const vx = ax.y*uz - ax.z*uy, vy = ax.z*ux - ax.x*uz, vz = ax.x*uy - ax.y*ux;
   return [[ux, uy, uz], [vx, vy, vz]];
+}
+
+// Small label with a soft dark shadow so it stays readable over the render.
+function _vizLabel(str, x, y, ah, av, r, g, b, a) {
+  textAlign(ah, av);
+  fill(0, 0, 0, a * 0.6);
+  text(str, x + 1, y + 1);
+  fill(r, g, b, a);
+  text(str, x, y);
 }
 
 function _vizArrowHead(from, to, col, A) {
