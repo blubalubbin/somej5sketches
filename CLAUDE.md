@@ -11,35 +11,54 @@ For *what each sketch does* (render pipelines, controls, overlays) see
 ## Layout
 
 - `index.html` — catalogue page linking to each sketch.
-- `<sketch>/index.html` — self-contained page: CSS + DOM + one large inline
-  `<script>` holding all UI logic (controls panel, sliders, auto-cycle, share
-  links, screenshot export, glassy tips).
+- `common/ui.js` — the **shared, data-driven interface runtime** (one classic
+  script exposing `window.SketchUI`). Builds the HUD + controls panel DOM from a
+  config and wires every behaviour: slider drag, auto-cycle, trim handles,
+  glassy tips, share links, PNG export. No sketch should reimplement this.
+- `common/ui.css` — the shared interface styles (class names must stay in sync
+  with the markup `ui.js` emits).
+- `<sketch>/index.html` — a thin loader: a little sketch-specific CSS, then
+  `sketch.js`, `../common/ui.js`, and `config.js` in that order.
+- `<sketch>/config.js` — declares the per-sketch CONFIG object (sliders,
+  sections, tips, share/export wiring) and calls `SketchUI.init(CONFIG)`.
 - `<sketch>/sketch.js` — the p5 sketch: globals, `setup()`/`draw()`, the render
-  pipeline, and the parameter setters. Loaded *before* the inline script.
+  pipeline, and the parameter setters. Loaded *before* the runtime.
 
 ## Cross-script globals (important)
 
-`sketch.js` and the inline `<script>` are both classic scripts on the same
-page, so top-level `let`/`const` in `sketch.js` (e.g. `axisTheta`, `rotOffset`,
-`coordExp`, `rotMode`, `rotationVector`, `vizSurface`) are visible to the inline
-script *by name*. The inline script calls the setters `sketch.js` exposes
-(`setAxisTheta`, `setRotR`, …) and reads those globals directly. There is no
-module system or bundler.
+`sketch.js`, `ui.js` and `config.js` are all classic scripts on the same page.
+Two distinct visibility rules bite here:
 
-## Plumbing a parameter (rotating-sphere-v2)
+- **`function` declarations** in `sketch.js` (the setters `setAxisTheta`,
+  `encodeSettings`, …) become properties on `window`, so `ui.js` calls them by
+  name (`window[cfg.set]`).
+- **top-level `let`/`const`** in `sketch.js` (`axisTheta`, `rotMode`,
+  `coordExp`, `rotationVector`, `vizSurface`, …) are visible to other classic
+  scripts *by bare name* but are **not** on `window`. So `config.js` reads them
+  directly inside its closures (`get`, `toValue`, `rows`, `getMode`), while
+  `ui.js` — which can't see them by bare name — only ever touches them through
+  those config closures. `ui.js` publishes `window._sliderSpeeds` because
+  rotating-sphere's `sketch.js` reads it by bare name.
 
-One parameter is wired through several places; miss one and it silently
-desyncs. Checklist:
+## Plumbing a parameter (config-driven)
 
-1. `sketch.js`: global + `setXxx()` setter, used in the render path.
-2. `sketch.js` `getSettings()` / `applySettingsFromHash()` — share-link round-trip.
-3. `index.html`: the slider row (`oninput` calls the setter + updates the value label).
-4. Auto-cycle registries in the inline script: `_WRAP_IDS` vs `_OSCILLATE_IDS`,
-   `_sliderDefaults`, `_sliderDefaultSpeeds`, and — if it should stay shareable
-   while cycling — the `sp_*` maps in `_encodeSpeedParams` / `_applySpeedsFromHash`.
-5. `_syncControlsFromState()` — hydrates sliders from state on load.
-6. `_drawSettingsPanel()` — the PNG export's settings list.
-7. `_tipInfo` — the glassy tip text (optional).
+A parameter now lives in two files. In `sketch.js`: the global + `setXxx()`
+setter (render path) and the `encodeSettings`/`applySettingsFromHash`
+round-trip. Everything else is one entry in `config.js`'s `sliders` array:
+
+1. `id`, `section`, `label`, `min`/`max`/`step`/`default`.
+2. `set` (the setter's name) + optional `toValue` (slider position → setter arg)
+   and `format` (slider position → value label).
+3. `get` — slider position from current state, for load-time hydration.
+4. `cycle` (`'wrap'` | `'oscillate'` | `'none'`) + `speed` (auto-cycle row).
+5. `trim` — opt-in cycle-range handles (warp sliders).
+6. `tip` — the glassy tip text (optional).
+7. Add the id → `sp_*` mapping in `share.speedParams` to keep it shareable while
+   cycling, and a row in `exportPanel.rows()` for the PNG settings list.
+
+Bespoke features are opt-in config keys: `modeToggle` (mutually-exclusive slider
+groups), `canvasDrag`, `panelButtons`, `panelFooter`. A sketch that omits a key
+instantiates none of that code path.
 
 ## Testing
 
