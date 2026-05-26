@@ -348,6 +348,15 @@ function _updateMouseInteraction() {
   const mX = max(1, mouseX);
   const mY = max(1, mouseY);
 
+  // Pause the canvas push while the user is working a slider/button, so adjusting
+  // controls never disturbs the flow. Keep prevMouse current to avoid a jump when
+  // interaction resumes.
+  if (window.SketchUI && SketchUI.controlsBusy && SketchUI.controlsBusy()) {
+    _prevMouseX = mX;
+    _prevMouseY = mY;
+    return;
+  }
+
   const N     = NavierStokesFluidSolver.GRID_SIZE;
   const cellW = width  / N;
   const cellH = height / N;

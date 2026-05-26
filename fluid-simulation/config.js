@@ -23,6 +23,15 @@ SketchUI.init({
     ['Trail fade', 'lower = longer motion trails'],
   ],
 
+  // Default canvas interaction (native 2D mouse-push, handled in sketch.js).
+  // The runtime pauses it while a slider/button is being used.
+  interaction: {
+    text: 'Move or drag the canvas to push the fluid',
+    tip: { eyebrow: 'Canvas', headline: 'Push the fluid',
+      lead: 'Move the pointer across the canvas to stir the velocity field.',
+      note: 'Faster strokes inject more force (capped by <strong>Max mouse vel</strong>). Working a slider pauses this so you don’t disturb the flow.' },
+  },
+
   share: {
     speedParams: {
       'viscosity-slider': 'sp_v', 'diffusion-slider': 'sp_d',

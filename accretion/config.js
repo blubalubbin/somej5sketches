@@ -24,6 +24,19 @@ SketchUI.init({
     ['Color R/G/B', 'shift the cosine palette hue channels'],
   ],
 
+  // Default canvas interaction: drag maps onto existing sliders (x→radial scale,
+  // y→angle squish, drag up toward a rounder disk). Always on — no toggle.
+  canvasDrag: {
+    x: { target: () => 'radial-slider', perWidth: 14.5,   mode: 'clamp' },
+    y: { target: () => 'squish-slider', perHeight: -1.99, mode: 'clamp' },
+  },
+  interaction: {
+    text: 'Drag the canvas to shape the disk',
+    tip: { eyebrow: 'Canvas', headline: 'Drag to shape',
+      lead: 'Drag across the canvas to reshape the accretion disk by hand.',
+      note: 'Left/right sets the <strong>radial scale</strong> (ring size); up/down sets <strong>angle squish</strong> — drag up toward a rounder disk.' },
+  },
+
   share: {
     speedParams: {
       'radial-slider': 'sp_r', 'depth-slider': 'sp_d',

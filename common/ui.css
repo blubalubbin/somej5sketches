@@ -76,6 +76,26 @@ input[type="range"] {
   font-size: 0.85rem; font-family: monospace;
 }
 
+/* ── Canvas-interaction note: one line at the top of the controls panel naming
+      the sketch's default interaction; tap to show its glassy tip. ── */
+.interaction-note {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin: 0 -0.25rem 0.85rem; padding: 0.5rem 0.7rem;
+  border: 1px solid rgba(88,166,255,0.22);
+  border-radius: 6px; background: rgba(88,166,255,0.06);
+  color: #9db7d6; font-size: 0.85rem;
+  cursor: pointer; user-select: none;
+}
+.interaction-note:hover { border-color: rgba(88,166,255,0.45); color: #cfe3ff; }
+.interaction-note .ix-icon { font-size: 0.95rem; flex-shrink: 0; }
+.interaction-note .ix-text { flex: 1; min-width: 0; }
+.interaction-note .ix-hint {
+  flex-shrink: 0; font-size: 0.65rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: #58a6ff;
+  border: 1px solid rgba(88,166,255,0.4); border-radius: 3px;
+  padding: 0.12rem 0.4rem; line-height: 1;
+}
+
 /* speed sub-row: visible only while speed != 0 (▶ button starts it) */
 .speed-row {
   display: flex; align-items: center;

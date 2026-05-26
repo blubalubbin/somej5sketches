@@ -45,8 +45,16 @@
 
     // Dragging the canvas drives the active rotation slider (mode-dependent).
     canvasDrag: {
-      target: () => (typeof rotMode !== 'undefined' && rotMode === 'rgb') ? 'rotb-slider' : 'rot-offset-slider',
-      rotationsPerWidth: 8,
+      x: { target: () => (typeof rotMode !== 'undefined' && rotMode === 'rgb') ? 'rotb-slider' : 'rot-offset-slider',
+           perWidth: 8 * 360, mode: 'wrap' },
+    },
+
+    // Default canvas interaction, surfaced in the controls panel with a tip.
+    interaction: {
+      text: 'Drag the canvas to spin the sphere',
+      tip: { eyebrow: 'Canvas', headline: 'Drag to spin',
+        lead: 'Drag anywhere on the canvas to rotate the sphere by hand.',
+        note: 'A horizontal drag turns the active rotation — <strong>Rotation</strong> in axis mode, <strong>Rotate B</strong> in RGB mode.' },
     },
 
     panelFooter: '<div class="axis-readout">axis: (<span id="axis-display">0.577, 0.577, 0.577</span>)</div>',

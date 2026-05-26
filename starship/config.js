@@ -26,6 +26,19 @@ SketchUI.init({
     ['Particles', 'how many debris streaks fill the scene'],
   ],
 
+  // Default canvas interaction: drag maps onto existing sliders (x→exposure,
+  // y→particle count, drag up for more). Always on — no toggle.
+  canvasDrag: {
+    x: { target: () => 'exposure-slider', perWidth: 2.8, mode: 'clamp' },
+    y: { target: () => 'count-slider',    perHeight: -49, mode: 'clamp' },
+  },
+  interaction: {
+    text: 'Drag the canvas to stir the debris',
+    tip: { eyebrow: 'Canvas', headline: 'Drag to stir',
+      lead: 'Drag across the canvas to drive the debris field by hand.',
+      note: 'Left/right sets the <strong>exposure</strong> (brightness); up/down sets the <strong>particle</strong> count — drag up for more.' },
+  },
+
   share: {
     speedParams: {
       'speed-slider': 'sp_s', 'count-slider': 'sp_n',
