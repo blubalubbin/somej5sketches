@@ -52,14 +52,14 @@ The warp at `a=1, b=0` is the identity (no distortion).  Changing **a** compress
 
 ---
 
-### [Rotating sphere v2](rotating-sphere-v2/)
+### [Rotating sphere](rotating-sphere-v2/)
 
 Extends v1 with two conceptual changes:
 
 1. **Coordinate-centre offset** — a 3-vector `(cx, cy, cz)` is subtracted from each surface normal *before* the warp is applied, shifting which region of the complex-power function is sampled.
 2. **Warp before renormalisation** — after the warp the vector is renormalised to unit length before the rotation is applied.  This guarantees the output always stays in `[0, 255]` and lets the exponent shape the direction of the normal rather than its magnitude.
 
-#### v2 render pipeline
+#### Render pipeline
 
 ```
 surface normal  n  (unit sphere)
@@ -82,7 +82,7 @@ surface normal  n  (unit sphere)
 
 When `cx=cy=cz=0` and `a=1, b=0` both pipelines produce identical output (the renormalise step is a no-op on an already-unit vector).
 
-#### Additional controls (v2 only)
+#### Additional controls
 
 | Slider | Effect |
 |--------|--------|
