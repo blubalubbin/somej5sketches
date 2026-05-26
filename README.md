@@ -2,62 +2,36 @@
 
 Live demo: **<https://blubalubbin.github.io/somej5sketches/>**
 
-A small catalogue of [p5.js](https://p5js.org/) sketches, served as a static site via GitHub Pages.
+A small catalogue of interactive [p5.js](https://p5js.org/) sketches, served as a
+static site via GitHub Pages — no build step and no dependencies beyond the p5
+CDN.
+
+Every sketch runs inside the same interactive shell: a HUD bar, a collapsible
+controls panel with auto-cycling sliders, shareable links and a screenshot
+export. That shared interface is described once in
+[Shared interface](#shared-interface); the per-sketch sections below cover only
+what makes each sketch different.
 
 ---
 
 ## Sketches
 
-### [Rotating sphere](rotating-sphere/)
-
-A unit sphere whose surface normals are mapped to RGB colour channels, then rotated by a configurable axis using a Rodrigues rotation matrix.  Move the cursor horizontally to add extra spin.
-
-#### Render pipeline
-
-```
-surface normal (unit sphere)
-        │
-        ▼  optional complex-power warp
-   n' = sign(n) · |n|^a · cos(b · ln|n|)
-        │
-        ▼  Rodrigues rotation  (axis θ,φ; angle = frameCount × speed + mouse)
-   n'' = R · n'
-        │
-        ▼  map  [-1, 1]  →  [0, 255]
-   pixel RGB = n'' × 127.5 + 127.5
-```
-
-Two render modes share the same colour function:
-
-| Mode | How the sphere is sampled |
-|------|--------------------------|
-| **Flat map** | Equirectangular UV grid — every pixel maps to a fixed point on the unit sphere; the whole surface is visible at once. |
-| **3D sphere** | Orthographic ray-cast — each screen pixel fires a ray; only the front hemisphere is shown, with the edge fading as the normal grazes 90°. |
-
-The warp at `a=1, b=0` is the identity (no distortion).  Changing **a** compresses or expands the colour bands (lower = flatter, higher = sharper near the poles).  Adding a non-zero **b** creates oscillating colour rings via the imaginary part of the complex exponent.
-
-#### Controls
-
-| Slider | Effect |
-|--------|--------|
-| Polar θ / Azimuth φ | Direction of the rotation axis in spherical coordinates |
-| Speed | Base rotation rate (rad / frame) |
-| Exponent a | Real part of the complex power applied to each normal component |
-| Imaginary b | Imaginary part — creates oscillating colour bands |
-
-#### HUD extras
-
-- **↓ GIF** — captures ~3 s at 15 fps and appends a parameter summary card before downloading `rotating-sphere.gif`.
-- **⚙ Controls** — opens a panel with sliders and a live mini-sphere preview.  The preview shows the sphere in a fixed XYZ frame with the rotation axis arrow overlaid.
-
----
-
 ### [Rotating sphere](rotating-sphere-v2/)
 
-Extends v1 with two conceptual changes:
+<!-- Screenshot: drop a PNG at docs/screenshots/rotating-sphere.png and uncomment -->
+<!-- ![Rotating sphere](docs/screenshots/rotating-sphere.png) -->
 
-1. **Coordinate-centre offset** — a 3-vector `(cx, cy, cz)` is subtracted from each surface normal *before* the warp is applied, shifting which region of the complex-power function is sampled.
-2. **Warp before renormalisation** — after the warp the vector is renormalised to unit length before the rotation is applied.  This guarantees the output always stays in `[0, 255]` and lets the exponent shape the direction of the normal rather than its magnitude.
+A unit sphere whose surface normals are mapped to RGB colour channels and then
+rotated by a configurable axis using a Rodrigues rotation matrix. Drag the
+canvas to spin it by hand. Two design choices shape the colour field:
+
+1. **Coordinate-centre offset** — a 3-vector `(cx, cy, cz)` is subtracted from
+   each surface normal *before* the warp is applied, shifting which region of
+   the complex-power function is sampled.
+2. **Warp before renormalisation** — after the warp the vector is renormalised
+   to unit length before the rotation. This keeps the output in `[0, 255]` and
+   lets the exponent shape the *direction* of the normal rather than its
+   magnitude.
 
 #### Render pipeline
 
@@ -80,44 +54,123 @@ surface normal  n  (unit sphere)
    pixel RGB = n̂' × 127.5 + 127.5
 ```
 
-When `cx=cy=cz=0` and `a=1, b=0` both pipelines produce identical output (the renormalise step is a no-op on an already-unit vector).
+With `cx=cy=cz=0`, `a=1` and `b=0` the warp is the identity and the renormalise
+step is a no-op, so the sphere shows the raw normal-to-colour mapping.
 
-#### Additional controls
+#### Controls
 
-| Slider | Effect |
-|--------|--------|
-| Centre R / G / B | Shifts the warp origin along each colour-channel axis; colour bands migrate across the sphere surface as you drag |
-
-The colour-coded centre sliders (R = red, G = green, B = blue) match the R/G/B reference frame shown in the RGB-space overlay.
+| Section | Slider | Effect |
+|---------|--------|--------|
+| Rotation | Polar θ / Azimuth φ | Direction of the rotation axis in spherical coordinates |
+| Rotation | Rotation | Angle about the axis (auto-cycle it for a continuous spin) |
+| Colour warp | Exponent a | Real part of the complex power — compresses or sharpens the colour bands |
+| Colour warp | Imaginary b | Imaginary part — creates oscillating colour rings |
+| Coordinate centre | Centre R / G / B | Shifts the warp origin along each colour-channel axis |
 
 #### RGB-space overlay
 
-While a parameter is changing — dragged by hand or advanced by a ▶ play button — a 3D wireframe fades in over the render and relates the flat UV map back to a shape:
+While a parameter changes — dragged by hand or advanced by a ▶ play button — a
+3D wireframe fades in over the render and relates the flat colour map back to a
+shape. The unit sphere is sampled on a coarse grid and pushed through the warp
+*without* the final renormalise step, so the points genuinely bulge away from a
+sphere; each vertex is tinted with the exact pixel colour it produces, so the
+cloud literally sits in RGB space. Fixed R/G/B axes, faint unit-sphere great
+circles (the natural colour bound), a bounding box and the rotation axis are all
+drawn, with overshoot past unit length highlighted. A button toggles between a
+filled **surface** mesh and individual **dots**.
 
-- **Deformed sphere** — the unit sphere is sampled on a coarse grid and pushed through the warp (`centre → exponent → imaginary`) *without* the final renormalise step, so the points genuinely bulge away from a sphere.  Each vertex is drawn at its position and tinted with the exact pixel colour it produces — its normalised direction — so the cloud literally sits in RGB space.  A button in the controls panel toggles between a filled **surface** mesh (the default) and individual **dots**.
-- **Unit axes** — fixed R/G/B arrows mark the colour-channel frame.
-- **Unit-sphere reference** — three faint great circles show the unit radius (the natural colour bound).  Because the colour comes only from each vertex's *direction*, the radial bulge is otherwise invisible: any part of the shape reaching past unit length is highlighted (a bright white ring on overshooting dots, a white outline on overshooting surface facets), and the caption reports the `max radius` and whether it exceeds unit.
-- **Bounding box** — scales to the shape's actual extent, which grows or shrinks with the warp parameters; the caption reports the current half-extent.
-- **Orientation** — the rotation axis is drawn in yellow (invariant under the spin) and a white pole marker (the image of +Z) sweeps as the rotation offset advances, so the shape's orientation and its rotation about the axis settings are both visible.
+---
 
-While a single control is **dragged by hand**, an extra indicator for that parameter fades in to make it intuitive (these stay hidden during auto-cycling, since they track manual edits):
+### [Fluid simulation](fluid-simulation/)
 
-- **Polar θ** — a cyan arc from the +Z (blue / up) axis to the rotation axis, showing the tilt away from vertical.
-- **Azimuth φ** — a magenta arc swept around the XY equator from +X, with a drop line from the axis tip, showing the compass heading.
-- **Rotation** — a yellow circular arrow swirling around the axis, whose phase tracks the offset.
-- **Centre offset** — red/green/blue component legs plus a resultant arrow, with the distance along each R/G/B reference axis read out (`R +0.40`, `G −0.30`, `B …`) and the total `|RGB|` magnitude.
+<!-- Screenshot: drop a PNG at docs/screenshots/fluid-simulation.png and uncomment -->
+<!-- ![Fluid simulation](docs/screenshots/fluid-simulation.png) -->
 
-#### Glassy tips
+An interactive Navier-Stokes fluid solver based on
+[Jos Stam's GDC 2003 paper](http://www.dgp.toronto.edu/people/stam/reality/Research/pdf/GDC03.pdf).
+A coarse velocity/density grid advects ~32 k particle tracers; move the mouse to
+push the fluid and watch the tracers stream through the flow.
 
-While you adjust a control by hand, a large explanatory caption fades in over the canvas — the text is mostly transparent with a bright glass rim, so the colourful render shows through the letterforms.  A short eyebrow + big headline name the parameter, and supporting lines explain how to read the helper numbers — in particular that **bounds** (how far the warped shape reaches) is *not* the same as **|RGB|** (how far the centre offset has been shifted).  The tips are on by default and can be turned off from the controls panel; they only respond to hands-on edits, not auto-cycling.
+#### Controls
 
-The overlay is purely informational and disappears about a second after the last change.
+| Section | Slider | Effect |
+|---------|--------|--------|
+| Fluid physics | Viscosity | How quickly the velocity field diffuses |
+| Fluid physics | Diffusion | How quickly density spreads |
+| Fluid physics | Force scale | Strength of the push applied by the mouse |
+| Fluid physics | Max mouse vel | Caps the velocity injected per frame |
+| Particles | Hue | Base colour of the tracers |
+| Particles | Trail fade | Lower = longer motion trails |
+
+---
+
+### [Accretion](accretion/)
+
+<!-- Screenshot: drop a PNG at docs/screenshots/accretion.png and uncomment -->
+<!-- ![Accretion](docs/screenshots/accretion.png) -->
+
+A raymarched accretion disk rendered entirely in a GLSL fragment shader. Each
+ray is bent through polar coordinates, displaced by several octaves of fractal
+sine-noise and colour-accumulated using a cosine palette. Adapted from
+[“Accretion” by @XorDev on ShaderToy](https://www.shadertoy.com/view/WcKXDV).
+
+#### Controls
+
+| Section | Slider | Effect |
+|---------|--------|--------|
+| Accretion disk | Radial scale | Radial density of the disk structure |
+| Accretion disk | Depth fade | Falloff of brightness with distance |
+| Accretion disk | Angle squish | Flattens the disk along its angular axis |
+| Accretion disk | Ray offset | Shifts the ray origin through the field |
+| Appearance | Time speed | Animation rate (0 freezes the scene) |
+| Appearance | Color R / G / B | Shift the cosine palette per channel |
+
+---
+
+## Shared interface
+
+All three sketches share the same controls layer, so once you have learned one
+you know them all.
+
+- **HUD bar** (pinned to the bottom of the screen):
+  - **← Index** — back to the catalogue.
+  - **ⓘ Info** — a panel describing the sketch and a quick reference.
+  - **⚙ Controls** — opens the slider panel.
+  - **⬇ Download** — exports a PNG of the canvas with a settings card listing
+    every current parameter.
+  - **⬆ Share** — copies a link that encodes all current settings (and any
+    running auto-cycle speeds) so a configuration round-trips exactly.
+- **Controls panel** — sliders grouped into sections. Each section and each
+  individual slider has a `↺` reset button, plus a global **Reset all**.
+- **Auto-cycle** — every slider has a ▶ play button that animates it on its own
+  (values wrap or oscillate) at an adjustable speed; **Play all** toggles them
+  together. Cycle speeds are part of the share link.
+- **Glassy tips** — while you drag a control by hand, a large translucent
+  caption fades in over the canvas naming the parameter and explaining what it
+  does. Tips can be toggled off in the controls panel and never appear during
+  auto-cycling.
+- **Touch friendly** — the UI dims while you drag the canvas or a slider, and
+  the controls panel scrolls when it gets tall, so everything works on a phone.
+
+---
+
+## Project layout
+
+```
+index.html              catalogue page linking to each sketch
+<sketch>/index.html      self-contained page: CSS + DOM + inline UI script
+<sketch>/sketch.js       the p5 sketch: setup(), draw(), render pipeline, setters
+accretion/*.glsl         GLSL vertex/fragment shaders (accretion only)
+```
+
+Each sketch is fully self-contained; there is no bundler or module system.
 
 ---
 
 ## Running locally
 
-No build step required — open either `index.html` in a browser or serve from any static file server:
+No build step required — open `index.html` in a browser, or serve the folder
+from any static file server:
 
 ```bash
 python3 -m http.server 8000
