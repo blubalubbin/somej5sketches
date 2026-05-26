@@ -17,15 +17,6 @@ SketchUI.init({
          target="_blank" rel="noopener">"Starship" by @XorDev on ShaderToy</a>,
       inspired by the debris from SpaceX's 7th Starship test.
     </p>`,
-  infoItems: [
-    ['&#9881; Controls', 'adjust motion, density &amp; colours'],
-    ['&#8595; Download', 'export a settings panel + image'],
-    ['&#11014; Share', 'copy a link with all current settings'],
-    ['▶ button', 'start auto-cycling a slider; click again to stop'],
-    ['Time speed 0', 'freezes the animation'],
-    ['Particles', 'how many debris streaks fill the scene'],
-  ],
-
   // Default canvas interaction: drag maps onto existing sliders (x→exposure,
   // y→particle count, drag up for more). Always on — no toggle.
   canvasDrag: {

@@ -23,14 +23,14 @@
     pngPrefix: 'rotating-sphere',
     storagePrefix: 'sphere-v2',
 
-    infoItems: [
-      ['Drag canvas', 'rotate the sphere'],
-      ['&#9881; Controls', 'adjust axis, warp &amp; centre parameters'],
-      ['&#8595; Download', 'export a settings panel + image'],
-      ['&#11014; Share', 'copy a link with all current settings'],
-      ['▶ button', 'click to start auto-cycling a slider; click again to stop'],
-      ['Trim handles', 'drag the range handles to set cycle bounds'],
-    ],
+    infoHtml: `<p style="margin:0.5rem 0 0.6rem;color:#aaa;font-size:0.87rem;max-width:64ch;">
+        A unit sphere whose surface normals are mapped to RGB colour and then
+        rotated about a configurable axis. A complex-power <em>warp</em> reshapes
+        the colour field before it is renormalised, and a coordinate-centre
+        offset shifts which region of the function is sampled. Drag the canvas to
+        spin it by hand; an RGB-space wireframe fades in while a parameter changes
+        to relate the flat colour map back to a shape.
+      </p>`,
 
     // Viz overlay toggle lives in the panel toolbar (between Reset all and Tips).
     panelButtons: [

@@ -14,15 +14,6 @@ SketchUI.init({
       <a href="https://www.shadertoy.com/view/XsXXDn" style="color:#58a6ff;"
          target="_blank" rel="noopener">"Creation" by Silexars (Danilo Guanabara)</a>.
     </p>`,
-  infoItems: [
-    ['&#9881; Controls', 'adjust motion &amp; pattern parameters'],
-    ['&#8595; Download', 'export a settings panel + image'],
-    ['&#11014; Share', 'copy a link with all current settings'],
-    ['▶ button', 'start auto-cycling a slider; click again to stop'],
-    ['Time speed 0', 'freezes the animation'],
-    ['Exposure', 'overall brightness of the output'],
-  ],
-
   // Default canvas interaction: drag maps onto existing sliders (x→ripple freq,
   // y→exposure, drag up to brighten). Always on — no toggle.
   canvasDrag: {

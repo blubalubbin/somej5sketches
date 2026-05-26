@@ -225,12 +225,6 @@ input[type="range"] {
   font-size: 0.9rem; color: #ccc;
 }
 #info-panel.open { display: block; }
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 0.6rem 2rem; margin-top: 0.5rem;
-}
-.info-grid-item strong { color: #eee; margin-right: 0.4rem; }
 #info-close {
   float: right; margin-left: 1rem;
   background: none; border: 1px solid rgba(255,255,255,0.18);

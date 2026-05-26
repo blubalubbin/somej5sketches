@@ -15,15 +15,6 @@ SketchUI.init({
       <a href="https://www.shadertoy.com/view/WcKXDV" style="color:#58a6ff;"
          target="_blank" rel="noopener">"Accretion" by @XorDev on ShaderToy</a>.
     </p>`,
-  infoItems: [
-    ['&#9881; Controls', 'adjust disk geometry &amp; colours'],
-    ['&#8595; Download', 'export a settings panel + image'],
-    ['&#11014; Share', 'copy a link with all current settings'],
-    ['▶ button', 'start auto-cycling a slider; click again to stop'],
-    ['Time speed 0', 'freezes the animation'],
-    ['Color R/G/B', 'shift the cosine palette hue channels'],
-  ],
-
   // Default canvas interaction: drag maps onto existing sliders (x→radial scale,
   // y→angle squish, drag up toward a rounder disk). Always on — no toggle.
   canvasDrag: {
