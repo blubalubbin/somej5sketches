@@ -18,8 +18,7 @@ what makes each sketch different.
 
 ### [Rotating sphere](rotating-sphere-v2/)
 
-<!-- Screenshot: drop a PNG at docs/screenshots/rotating-sphere.png and uncomment -->
-<!-- ![Rotating sphere](docs/screenshots/rotating-sphere.png) -->
+![Rotating sphere](docs/screenshots/rotating-sphere.png)
 
 A unit sphere whose surface normals are mapped to RGB colour channels and then
 rotated by a configurable axis using a Rodrigues rotation matrix. Drag the
@@ -83,8 +82,7 @@ filled **surface** mesh and individual **dots**.
 
 ### [Fluid simulation](fluid-simulation/)
 
-<!-- Screenshot: drop a PNG at docs/screenshots/fluid-simulation.png and uncomment -->
-<!-- ![Fluid simulation](docs/screenshots/fluid-simulation.png) -->
+![Fluid simulation](docs/screenshots/fluid-simulation.png)
 
 An interactive Navier-Stokes fluid solver based on
 [Jos Stam's GDC 2003 paper](http://www.dgp.toronto.edu/people/stam/reality/Research/pdf/GDC03.pdf).
@@ -106,8 +104,7 @@ push the fluid and watch the tracers stream through the flow.
 
 ### [Accretion](accretion/)
 
-<!-- Screenshot: drop a PNG at docs/screenshots/accretion.png and uncomment -->
-<!-- ![Accretion](docs/screenshots/accretion.png) -->
+![Accretion](docs/screenshots/accretion.png)
 
 A raymarched accretion disk rendered entirely in a GLSL fragment shader. Each
 ray is bent through polar coordinates, displaced by several octaves of fractal
