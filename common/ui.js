@@ -35,6 +35,10 @@
   // user is working a slider or button. Published on window.SketchUI as
   // controlsBusy().
   let   _uiPointerActive  = false;
+  // True during a canvas drag. The drag dispatches `input` on its target
+  // slider(s), so we suppress the per-slider tips those would trigger and show
+  // the interaction's own tip instead (a 2D drag moves two sliders at once).
+  let   _canvasDragActive = false;
 
   let tipsEnabled   = true;
   let _suppressTips = false;
@@ -452,6 +456,7 @@
     _tipTimer = setTimeout(() => o.classList.remove('show'), 2800);
   }
   function _showTip(id) {
+    if (_canvasDragActive) return;   // canvas drag shows the interaction tip instead
     const cfg = byId[id]; if (!cfg || !cfg.tip) return;
     if (_sliderSpeeds[id]) return;   // manual only: skip while auto-cycling
     _showTipObj(cfg.tip, false);
@@ -755,6 +760,8 @@
         const sl = document.getElementById(sp.target());
         _starts.push(sl ? (parseFloat(sl.value) || 0) : 0);
       }
+      _canvasDragActive = true;
+      if (CFG.interaction && CFG.interaction.tip) _showTipObj(CFG.interaction.tip, false);
       document.getElementById('overlay').classList.add('canvas-dragging');
     });
     document.addEventListener('pointermove', e => {
@@ -774,7 +781,7 @@
     });
     ['pointerup', 'pointercancel'].forEach(ev =>
       document.addEventListener(ev, e => {
-        if (e.pointerId === _pid) { _active = false; document.getElementById('overlay').classList.remove('canvas-dragging'); }
+        if (e.pointerId === _pid) { _active = false; _canvasDragActive = false; document.getElementById('overlay').classList.remove('canvas-dragging'); }
       }));
   }
 
