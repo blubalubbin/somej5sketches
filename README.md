@@ -129,8 +129,9 @@ sine-noise and colour-accumulated using a cosine palette. Adapted from
 
 ## Shared interface
 
-All three sketches share the same controls layer, so once you have learned one
-you know them all.
+All three sketches share the same controls layer — built by one runtime,
+`common/ui.js`, from a small per-sketch `config.js` — so once you have learned
+one you know them all.
 
 - **HUD bar** (pinned to the bottom of the screen):
   - **← Index** — back to the catalogue.
@@ -158,12 +159,17 @@ you know them all.
 
 ```
 index.html              catalogue page linking to each sketch
-<sketch>/index.html      self-contained page: CSS + DOM + inline UI script
+common/ui.js             shared, data-driven interface runtime (window.SketchUI)
+common/ui.css            shared interface styles
+<sketch>/index.html      thin loader: sketch CSS + sketch.js + ui.js + config.js
+<sketch>/config.js       per-sketch CONFIG (sliders, sections, tips); calls SketchUI.init
 <sketch>/sketch.js       the p5 sketch: setup(), draw(), render pipeline, setters
 accretion/*.glsl         GLSL vertex/fragment shaders (accretion only)
 ```
 
-Each sketch is fully self-contained; there is no bundler or module system.
+The interface is shared via `common/ui.js`; each sketch only declares its
+controls in `config.js`. There is no bundler or module system — everything is
+classic scripts loaded in order.
 
 ---
 

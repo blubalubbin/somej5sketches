@@ -1,0 +1,329 @@
+/* Shared interface styles for all sketches. Built by common/ui.js from a
+   per-sketch config; see that file and each sketch's config.js. The DOM this
+   styles (HUD, controls panel, sliders, speed/trim rows, info panel, toast,
+   glassy tips) is generated at runtime, so class names here must stay in sync
+   with the markup ui.js emits. */
+
+#overlay {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  display: flex; flex-direction: column-reverse;
+  z-index: 10;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  color: #eee;
+  font-size: 1rem;
+}
+
+/* ── controls panel ── */
+#controls-panel {
+  display: none;
+  padding: 1rem 1.25rem;
+  background: rgba(0,0,0,0.82);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  transition: opacity 140ms ease;
+  /* When many sliders are playing their speed/trim rows are all shown, so
+     allow the panel to scroll instead of overflowing the viewport. */
+  max-height: calc(100vh - 4.5rem);
+  overflow-y: auto;
+}
+#controls-panel.open { display: block; }
+/* While a slider is dragged, fade the panel so the canvas underneath stays
+   visible. Opacity doesn't block pointer events, so the slider keeps tracking. */
+#controls-panel.dragging { opacity: 0.08; }
+#overlay.canvas-dragging { opacity: 0.08; }
+#controls-panel.auto-playing { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
+#controls-panel.auto-playing.revealed { opacity: 1; transition: opacity 0.15s ease; }
+#controls-panel.auto-playing.dragging { opacity: 0.08; transition: opacity 140ms ease; }
+@media (hover: hover) {
+  #controls-panel.auto-playing:hover { opacity: 1; transition: opacity 0.15s ease; }
+}
+
+.ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
+.ctrl-heading.section-heading {
+  display: flex; align-items: center; gap: 0.6rem;
+}
+
+/* ── slider group: main row + collapsible trim/speed sub-rows ── */
+.slider-group {
+  margin-bottom: 0.65rem;
+  border-radius: 6px;
+  background-color: transparent;
+  transition: background-color 0.3s ease;
+  padding: 0 0.25rem;
+  margin-left: -0.25rem; margin-right: -0.25rem;
+}
+.slider-group > .ctrl-row { margin-bottom: 0; }
+.slider-group.highlighted { background-color: rgba(88,166,255,0.07); }
+
+.ctrl-row {
+  display: flex; align-items: center;
+  gap: 0.9rem; margin-bottom: 0.65rem;
+}
+.ctrl-label  { min-width: 110px; color: #bbb; font-size: 0.9rem; cursor: ew-resize; user-select: none; }
+input[type="range"] {
+  flex: 1; min-width: 0; accent-color: #58a6ff;
+  height: 2rem; cursor: pointer;
+}
+.ctrl-value {
+  min-width: 64px; text-align: right;
+  color: #58a6ff; font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  cursor: ew-resize; user-select: none;
+}
+.axis-readout {
+  margin-top: 0.4rem; color: #555;
+  font-size: 0.85rem; font-family: monospace;
+}
+
+/* speed sub-row: visible only while speed != 0 (▶ button starts it) */
+.speed-row {
+  display: flex; align-items: center;
+  gap: 0.9rem; padding: 0.1rem 0 0.2rem;
+  overflow: hidden; max-height: 0; opacity: 0;
+  transition: max-height 0.2s ease, opacity 0.2s ease;
+}
+/* Shown whenever the slider is auto-cycling — independent of hover, so hovering
+   never changes the panel height (avoids reveal-on-hover flicker). */
+.slider-group.has-speed .speed-row { max-height: 2.5rem; opacity: 1; }
+.speed-label {
+  min-width: 110px; color: #888; font-size: 0.75rem;
+  font-style: italic; padding-left: 0.4rem;
+}
+.speed-value {
+  min-width: 64px; text-align: right;
+  color: #888; font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.speed-row input[type="range"] { accent-color: #e0a050; height: 1.4rem; }
+.slider-group.has-speed .speed-value { color: #e0a050; }
+.speed-play-btn {
+  background: none; border: 1px solid #444; border-radius: 3px;
+  cursor: pointer; color: #888; font-size: 0.7rem;
+  padding: 0.35rem 0.65rem; line-height: 1; flex-shrink: 0;
+}
+.speed-play-btn:hover { color: #e0a050; border-color: #e0a050; }
+.slider-group.has-speed .speed-play-btn { color: #e0a050; border-color: #e0a050; }
+.reset-btn {
+  background: none; border: 1px solid #333; border-radius: 3px;
+  cursor: pointer; color: #444; font-size: 0.75rem;
+  padding: 0.2rem 0.45rem; line-height: 1; flex-shrink: 0;
+}
+.reset-btn:hover { color: #aaa; border-color: #777; }
+
+/* ── Trim row: cycle-range handles for oscillating sliders ── */
+.trim-row {
+  display: flex; align-items: center;
+  gap: 0.9rem; padding: 0.1rem 0 0.2rem;
+  overflow: hidden; max-height: 0; opacity: 0;
+  transition: max-height 0.2s ease, opacity 0.2s ease;
+}
+.slider-group.has-speed .trim-row { max-height: 2.5rem; opacity: 1; }
+.trim-label {
+  min-width: 110px; color: #888; font-size: 0.75rem;
+  font-style: italic; padding-left: 0.4rem;
+}
+.trim-value {
+  min-width: 64px; text-align: right;
+  color: #888; font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.trim-range {
+  flex: 1; position: relative;
+  height: 1.4rem; cursor: ew-resize; user-select: none;
+}
+.trim-track {
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  transform: translateY(-50%);
+  height: 4px; background: #333; border-radius: 2px;
+}
+.trim-fill {
+  position: absolute; top: 0; height: 100%;
+  background: rgba(88,166,255,0.3);
+  pointer-events: none;
+}
+.trim-handle {
+  position: absolute;
+  width: 8px; height: 18px;
+  background: #555; border: 1px solid #777;
+  border-radius: 3px;
+  top: 50%; transform: translate(-50%, -50%);
+  cursor: ew-resize; touch-action: none;
+}
+.trim-handle:hover { background: #888; border-color: #aaa; }
+
+/* ── HUD bar ── */
+#hud {
+  display: flex; align-items: center;
+  flex-wrap: wrap; gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  transition: opacity 140ms ease;
+}
+#overlay:has(#controls-panel.dragging) #hud { opacity: 0.08; }
+#hud.dragging { opacity: 0.08; transition: opacity 140ms ease; }
+#overlay:has(#controls-panel.auto-playing.open) #hud { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
+#overlay:has(#controls-panel.auto-playing.open.revealed) #hud { opacity: 1; transition: opacity 0.15s ease; }
+#overlay:has(#controls-panel.auto-playing.open.revealed) #hud.dragging { opacity: 0.08; transition: opacity 140ms ease; }
+@media (hover: hover) {
+  #overlay:has(#controls-panel.auto-playing.open) #hud:hover { opacity: 1; transition: opacity 0.15s ease; }
+}
+#hud a.back {
+  display: flex; align-items: center; gap: 0.35rem;
+  padding: 0.6rem 1.25rem;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px; color: #eee;
+  text-decoration: none; white-space: nowrap; flex-shrink: 0;
+}
+#hud a.back:hover { background: rgba(255,255,255,0.2); }
+#hud button {
+  padding: 0.6rem 1.25rem;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px; color: #eee;
+  font-size: 1rem; cursor: pointer;
+  white-space: nowrap; flex-shrink: 0;
+}
+#hud button:hover { background: rgba(255,255,255,0.2); }
+#hud button.active {
+  background: rgba(88,166,255,0.18);
+  border-color: rgba(88,166,255,0.5);
+}
+
+/* ── Info panel ── */
+#info-panel {
+  display: none;
+  padding: 1rem 1.25rem 1.2rem;
+  background: rgba(0,0,0,0.78);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  font-size: 0.9rem; color: #ccc;
+}
+#info-panel.open { display: block; }
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.6rem 2rem; margin-top: 0.5rem;
+}
+.info-grid-item strong { color: #eee; margin-right: 0.4rem; }
+#info-close {
+  float: right; margin-left: 1rem;
+  background: none; border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 6px; color: #aaa;
+  font-size: 0.8rem; cursor: pointer;
+  padding: 0.25rem 0.7rem; line-height: 1.4;
+}
+#info-close:hover { color: #eee; border-color: rgba(255,255,255,0.4); }
+
+/* transient toast for share-link copy / screenshot status */
+#toast {
+  position: fixed; left: 50%; top: 1.2rem;
+  transform: translateX(-50%);
+  padding: 0.55rem 0.9rem;
+  background: rgba(20,40,30,0.92);
+  border: 1px solid rgba(120,200,150,0.45);
+  border-radius: 8px; color: #cfead8;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.9rem; z-index: 30;
+  opacity: 0; pointer-events: none;
+  transition: opacity 180ms ease;
+}
+#toast.show { opacity: 1; }
+
+/* ── Glassy parameter tip: big transparent text the colourful canvas shows
+      through; fades in on manual interaction, out when idle ── */
+#tip-overlay {
+  position: fixed; inset: 0;
+  z-index: 6;                 /* above canvas, below the HUD/controls */
+  pointer-events: none;
+  display: flex; flex-direction: column;
+  /* Top-aligned: on a phone the dragging thumb covers the lower screen, so the
+     tip text grows downward from the top to stay clear of it. */
+  justify-content: flex-start;
+  padding: clamp(1.25rem, 5vw, 4rem);
+  opacity: 0; transition: opacity 240ms ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+#tip-overlay.show { opacity: 1; }
+.tip-eyebrow {
+  font-size: clamp(0.7rem, 1.5vw, 1rem);
+  letter-spacing: 0.24em; text-transform: uppercase;
+  font-weight: 700; color: rgba(255,255,255,0.78);
+  text-shadow: 0 1px 8px rgba(0,0,0,0.55);
+  margin-bottom: 0.5rem;
+}
+/* Frosted glass: the colourful canvas is blurred *through* the glyph shapes.
+   The element's backdrop-filter frosts the canvas behind it, and a glyph-shaped
+   mask (generated in JS to match the rendered text) clips that frosting to the
+   letterforms. A faint text-stroke rim — preserved by dilating the mask — keeps
+   the letters legible over dark areas too. */
+.tip-headline {
+  font-size: clamp(2.4rem, 9vw, 7rem);
+  font-weight: 800; line-height: 0.98;
+  letter-spacing: -0.02em; margin: 0 0 0.55rem;
+  color: transparent;
+  -webkit-text-stroke: 1.2px rgba(255,255,255,0.72);
+  text-stroke: 1.2px rgba(255,255,255,0.72);
+  backdrop-filter: blur(9px) saturate(180%) brightness(1.18);
+  -webkit-backdrop-filter: blur(9px) saturate(180%) brightness(1.18);
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+}
+/* The supporting text sits on a frosted-glass card: the canvas is blurred and
+   slightly darkened behind it so small multi-line text stays legible. */
+#tip-lower {
+  align-self: flex-start; max-width: min(92vw, 560px);
+  margin-top: 0.1rem; padding: 0.7rem 0.95rem;
+  border-radius: 14px; background: rgba(8,10,16,0.22);
+  backdrop-filter: blur(14px) saturate(150%) brightness(0.78);
+  -webkit-backdrop-filter: blur(14px) saturate(150%) brightness(0.78);
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.tip-lead {
+  font-size: clamp(1.05rem, 2.6vw, 1.9rem);
+  font-weight: 600; line-height: 1.25; max-width: 24ch;
+  color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  margin-bottom: 0.55rem;
+}
+.tip-note {
+  font-size: clamp(0.92rem, 1.9vw, 1.2rem);
+  line-height: 1.5; max-width: 48ch;
+  color: rgba(238,242,250,0.95);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.tip-note strong { color: #fff; font-weight: 700; }
+
+/* toggled-on state for a controls-panel toggle button (e.g. Tips) */
+.speed-play-btn.toggled-on {
+  color: #cfe3ff; border-color: #7aa7d8;
+  background: rgba(120,160,220,0.14);
+}
+
+/* ── Slider cycle animations ── */
+/* Slider pill squishes and pops on wrap-around */
+@keyframes _slider-wrap-pop {
+  0%   { transform: scaleY(1);    opacity: 1; }
+  25%  { transform: scaleY(0.05); opacity: 0.3; }
+  60%  { transform: scaleY(1.35); opacity: 1; }
+  100% { transform: scaleY(1);    opacity: 1; }
+}
+input[type="range"].anim-wrap { animation: _slider-wrap-pop 0.35s ease; }
+
+/* Slider nudges right/left when it smacks a bound */
+@keyframes _slider-hit-hi {
+  0%, 100% { transform: translateX(0); }
+  35%       { transform: translateX(6px) scaleX(1.015); }
+  70%       { transform: translateX(-2px); }
+}
+@keyframes _slider-hit-lo {
+  0%, 100% { transform: translateX(0); }
+  35%       { transform: translateX(-6px) scaleX(1.015); }
+  70%       { transform: translateX(2px); }
+}
+input[type="range"].anim-hit-hi { animation: _slider-hit-hi 0.22s ease; }
+input[type="range"].anim-hit-lo { animation: _slider-hit-lo 0.22s ease; }
