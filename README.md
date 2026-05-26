@@ -127,6 +127,33 @@ sine-noise and colour-accumulated using a cosine palette. Adapted from
 
 ---
 
+### [Starship](starship/)
+
+<!-- Screenshot: drop a PNG at docs/screenshots/starship.png and uncomment -->
+<!-- ![Starship](docs/screenshots/starship.png) -->
+
+Fifty point-light particles are walked across the screen in a single loop. Each
+one flashes exponentially, smears into a long glowing trail and is tinted by a
+per-channel sine, then the whole field is `tanh` tone-mapped over a sky
+gradient. Adapted from
+[“Starship” by @XorDev on ShaderToy](https://www.shadertoy.com/view/l3cfW4),
+inspired by the debris from SpaceX's 7th Starship test. The original samples a
+noise texture (`iChannel0`) for the trails' cloudy depth; this port substitutes
+procedural value noise so the sketch keeps the repo's no-texture, no-dependency
+spirit. WebGL 1.0 also lacks `tanh()` and dynamic loop bounds, so a rational
+`tanh` approximation and a const-bounded loop with an early `break` stand in.
+
+#### Controls
+
+| Section | Slider | Effect |
+|---------|--------|--------|
+| Motion | Time speed | Animation rate (0 freezes the scene) |
+| Motion | Particles | How many debris streaks fill the scene (1–50) |
+| Appearance | Exposure | Brightness of the accumulated light |
+| Appearance | Color R / G / B | Per-channel colour frequency across particles |
+
+---
+
 ## Shared interface
 
 All three sketches share the same controls layer — built by one runtime,
