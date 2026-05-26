@@ -23,6 +23,19 @@ SketchUI.init({
     ['Exposure', 'overall brightness of the output'],
   ],
 
+  // Default canvas interaction: drag maps onto existing sliders (x→ripple freq,
+  // y→exposure, drag up to brighten). Always on — no toggle.
+  canvasDrag: {
+    x: { target: () => 'freq-slider',     perWidth: 19,    mode: 'clamp' },
+    y: { target: () => 'exposure-slider', perHeight: -2.8, mode: 'clamp' },
+  },
+  interaction: {
+    text: 'Drag the canvas to reshape the pattern',
+    tip: { eyebrow: 'Canvas', headline: 'Drag to warp',
+      lead: 'Drag across the canvas to sculpt the ripple field by hand.',
+      note: 'Left/right sweeps the <strong>ripple frequency</strong>; up/down sets <strong>exposure</strong> — drag up to brighten.' },
+  },
+
   share: {
     speedParams: {
       'speed-slider': 'sp_s', 'phase-slider': 'sp_p',

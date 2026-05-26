@@ -30,6 +30,11 @@
   const _cyclePos         = {};
   const _oscBounds        = {};   // slider id -> {lo,hi}; only trim sliders
   let   _draggingSliderId = null;
+  // True while a pointer is down on the HUD/controls UI. Sketches that own a
+  // canvas interaction (e.g. fluid's mouse-push) read this to pause it while the
+  // user is working a slider or button. Published on window.SketchUI as
+  // controlsBusy().
+  let   _uiPointerActive  = false;
 
   let tipsEnabled   = true;
   let _suppressTips = false;
@@ -168,6 +173,16 @@
     return h;
   }
 
+  // Single note line describing the sketch's default canvas interaction. Tapping
+  // it (when a tip is supplied) shows the glassy tip overlay.
+  function interactionNoteHTML(ix) {
+    const tappable = ix.tip ? ' data-interaction-tip="1"' : '';
+    const hint = ix.tip ? '<span class="ix-hint">tip</span>' : '';
+    return '<div class="interaction-note"' + tappable + '>' +
+      '<span class="ix-icon">' + (ix.icon || '&#9995;') + '</span>' +
+      '<span class="ix-text">' + ix.text + '</span>' + hint + '</div>';
+  }
+
   function buildDOM() {
     // HUD
     let hud = '<a class="back" href="' + (CFG.backHref || '../') +
@@ -193,6 +208,7 @@
     panel += '<button class="speed-play-btn" id="tips-btn" data-toggle-tips="1">&#128161; Tips</button>' +
       '<div style="flex:1"></div>' +
       '<button class="speed-play-btn" id="pause-all-btn" data-toggle-play="1">&#9654; Play all</button></div>';
+    if (CFG.interaction) panel += interactionNoteHTML(CFG.interaction);
     for (const sec of CFG.sections) panel += sectionHTML(sec);
     if (CFG.panelFooter) panel += CFG.panelFooter;
 
@@ -233,6 +249,7 @@
     panel.addEventListener('click', e => {
       const t = e.target;
       let el;
+      if (t.closest('[data-interaction-tip]'))       { _showTipObj(CFG.interaction && CFG.interaction.tip, true); return; }
       if ((el = t.closest('[data-reset]')))          { resetSlider(el.dataset.reset); return; }
       if ((el = t.closest('[data-reset-section]')))  { resetSection(el.dataset.resetSection); return; }
       if ((el = t.closest('[data-play]')))           { toggleSliderSpeed(el.dataset.play); return; }
@@ -279,6 +296,12 @@
       clearTimeout(_revealTimer);
       _revealTimer = setTimeout(() => panel.classList.remove('revealed'), 3000);
     }, { passive: false, capture: true });
+
+    // Track whether a pointer is down on the UI so canvas-owning sketches can
+    // pause their own interaction (capture phase: fires before slider handlers).
+    document.getElementById('overlay').addEventListener('pointerdown', () => { _uiPointerActive = true; }, true);
+    ['pointerup', 'pointercancel'].forEach(ev =>
+      document.addEventListener(ev, () => { _uiPointerActive = false; }));
 
     initSliderDrag();
     initTrimDrag();
@@ -413,20 +436,25 @@
     el.style.webkitMaskImage = uri;
     el.style.maskImage = uri;
   }
-  function _showTip(id) {
-    if (!tipsEnabled || _suppressTips) return;
-    const cfg = byId[id]; if (!cfg || !cfg.tip) return;
-    if (_sliderSpeeds[id]) return;   // manual only: skip while auto-cycling
-    const info = cfg.tip;
-    document.getElementById('tip-eyebrow').textContent  = info.eyebrow;
-    document.getElementById('tip-headline').textContent = info.headline;
-    document.getElementById('tip-lead').textContent     = info.lead;
-    document.getElementById('tip-note').innerHTML       = info.note;
+  // Render a tip object into the glassy overlay. `force` bypasses the tips
+  // toggle / suppression — used when the user explicitly taps the interaction note.
+  function _showTipObj(info, force) {
+    if (!info) return;
+    if (!force && (!tipsEnabled || _suppressTips)) return;
+    document.getElementById('tip-eyebrow').textContent  = info.eyebrow || '';
+    document.getElementById('tip-headline').textContent = info.headline || '';
+    document.getElementById('tip-lead').textContent     = info.lead || '';
+    document.getElementById('tip-note').innerHTML       = info.note || '';
     _applyFrostMask();
     const o = document.getElementById('tip-overlay');
     o.classList.add('show');
     clearTimeout(_tipTimer);
     _tipTimer = setTimeout(() => o.classList.remove('show'), 2800);
+  }
+  function _showTip(id) {
+    const cfg = byId[id]; if (!cfg || !cfg.tip) return;
+    if (_sliderSpeeds[id]) return;   // manual only: skip while auto-cycling
+    _showTipObj(cfg.tip, false);
   }
   function _syncTipsBtn() {
     const b = document.getElementById('tips-btn');
@@ -703,34 +731,46 @@
     }, true);
   }
 
-  // ── canvas drag → rotation slider (opt-in via CFG.canvasDrag) ──────────────
+  // ── canvas drag → slider(s) (opt-in via CFG.canvasDrag) ────────────────────
+  // Delta-based: each pointer axis maps onto a slider. A full-window drag changes
+  // the target by `perWidth`/`perHeight` value-units; `mode` is 'wrap' (angles)
+  // or 'clamp' (everything else). Use a negative span to invert (e.g. drag up to
+  // increase). Shape: { x: {target, perWidth, mode}, y: {target, perHeight, mode} }.
   function initCanvasDrag() {
     const cd = CFG.canvasDrag;
-    const rotations = cd.rotationsPerWidth || 8;
-    let _active = false, _startX = 0, _startOffset = 0, _pid = null, _targetId = null;
+    const specs = [];
+    if (cd.x) specs.push({ screen: 'x', target: cd.x.target, span: cd.x.perWidth,  mode: cd.x.mode || 'clamp' });
+    if (cd.y) specs.push({ screen: 'y', target: cd.y.target, span: cd.y.perHeight, mode: cd.y.mode || 'clamp' });
+
+    let _active = false, _startX = 0, _startY = 0, _pid = null;
+    const _starts = [];   // start value of each spec's target slider
     const isInOverlay = el => el && el.closest && el.closest('#overlay');
+
     document.addEventListener('pointerdown', e => {
       if (isInOverlay(e.target)) return;
       if (e.target instanceof HTMLInputElement) return;
-      _active = true; _startX = e.clientX;
-      _targetId = cd.target();
-      const sl = document.getElementById(_targetId);
-      _startOffset = sl ? (parseFloat(sl.value) || 0) : 0;
-      _pid = e.pointerId;
+      _active = true; _pid = e.pointerId; _startX = e.clientX; _startY = e.clientY;
+      _starts.length = 0;
+      for (const sp of specs) {
+        const sl = document.getElementById(sp.target());
+        _starts.push(sl ? (parseFloat(sl.value) || 0) : 0);
+      }
       document.getElementById('overlay').classList.add('canvas-dragging');
     });
     document.addEventListener('pointermove', e => {
       if (!_active || e.pointerId !== _pid) return;
-      const w = window.innerWidth || 1;
-      const newOffset = _startOffset + (e.clientX - _startX) / w * rotations * 360;
-      const slider = document.getElementById(_targetId);
-      if (slider) {
-        const min = parseFloat(slider.min), max = parseFloat(slider.max);
-        const span = max - min;
-        const v = min + ((newOffset - min) % span + span) % span;
+      const w = window.innerWidth || 1, h = window.innerHeight || 1;
+      specs.forEach((sp, i) => {
+        const slider = document.getElementById(sp.target());
+        if (!slider) return;
+        const frac = sp.screen === 'x' ? (e.clientX - _startX) / w : (e.clientY - _startY) / h;
+        const min = parseFloat(slider.min), max = parseFloat(slider.max), span = max - min;
+        let v = _starts[i] + frac * sp.span;
+        if (sp.mode === 'wrap') v = min + ((v - min) % span + span) % span;
+        else                    v = Math.max(min, Math.min(max, v));
         slider.value = v;
         slider.dispatchEvent(new Event('input', { bubbles: true }));
-      }
+      });
     });
     ['pointerup', 'pointercancel'].forEach(ev =>
       document.addEventListener(ev, e => {
@@ -928,5 +968,9 @@
     _toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
   }
 
-  window.SketchUI = { init };
+  // True while the user is touching the HUD/controls (slider, button, trim).
+  // Canvas-owning sketches call this to pause their pointer interaction.
+  function controlsBusy() { return _uiPointerActive; }
+
+  window.SketchUI = { init, controlsBusy };
 })();

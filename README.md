@@ -156,7 +156,7 @@ spirit. WebGL 1.0 also lacks `tanh()` and dynamic loop bounds, so a rational
 
 ## Shared interface
 
-All three sketches share the same controls layer — built by one runtime,
+All sketches share the same controls layer — built by one runtime,
 `common/ui.js`, from a small per-sketch `config.js` — so once you have learned
 one you know them all.
 
@@ -177,6 +177,12 @@ one you know them all.
   caption fades in over the canvas naming the parameter and explaining what it
   does. Tips can be toggled off in the controls panel and never appear during
   auto-cycling.
+- **Canvas interaction** — every sketch has a default pointer interaction on the
+  canvas (drag to rotate, shape, warp, stir, or push). It is named in a tappable
+  note at the top of the controls panel — tap it to show its glassy tip. Where
+  the interaction maps onto sliders (the shader sketches), a 2D drag drives two
+  parameters at once (left/right and up/down); fluid's native mouse-push pauses
+  automatically while you work a slider so you never disturb the flow.
 - **Touch friendly** — the UI dims while you drag the canvas or a slider, and
   the controls panel scrolls when it gets tall, so everything works on a phone.
 
