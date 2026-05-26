@@ -35,8 +35,14 @@
 #controls-panel.auto-playing { opacity: 0.08; transition: opacity 0.5s ease 0.5s; }
 #controls-panel.auto-playing.revealed { opacity: 1; transition: opacity 0.15s ease; }
 #controls-panel.auto-playing.dragging { opacity: 0.08; transition: opacity 140ms ease; }
+/* After you finish adjusting a slider the panel settles to a partial fade so the
+   canvas result stays visible; it pops back on hover (or when you grab a control
+   again — the class is dropped at drag start so the drag keeps its heavier fade). */
+#controls-panel.idle-dim { opacity: 0.4; transition: opacity 0.4s ease 0.5s; }
+#controls-panel.idle-dim.dragging { opacity: 0.08; transition: opacity 140ms ease; }
 @media (hover: hover) {
   #controls-panel.auto-playing:hover { opacity: 1; transition: opacity 0.15s ease; }
+  #controls-panel.idle-dim:hover { opacity: 1; transition: opacity 0.15s ease; }
 }
 
 .ctrl-heading { font-weight: 600; margin-bottom: 0.9rem; }
