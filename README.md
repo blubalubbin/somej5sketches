@@ -160,9 +160,11 @@ All sketches share the same controls layer — built by one runtime,
 `common/ui.js`, from a small per-sketch `config.js` — so once you have learned
 one you know them all.
 
-- **HUD bar** (pinned to the bottom of the screen):
-  - **← Index** — back to the catalogue.
-  - **ⓘ Info** — a panel describing the sketch and a quick reference.
+- **HUD bar** (pinned to the bottom of the screen). Hover any button (or
+  long-press it on touch) to show a glassy tip describing what it does:
+  - **← Back** — back to the catalogue.
+  - **ⓘ Description** — a panel describing what the sketch does (sketch-specific
+    only; the button actions are explained by their hover tips).
   - **⚙ Controls** — opens the slider panel.
   - **⬇ Download** — exports a PNG of the canvas with a settings card listing
     every current parameter.

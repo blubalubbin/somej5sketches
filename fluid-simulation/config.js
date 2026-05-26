@@ -14,15 +14,6 @@ SketchUI.init({
       <a href="http://www.dgp.toronto.edu/people/stam/reality/Research/pdf/GDC03.pdf"
          style="color:#58a6ff;" target="_blank" rel="noopener">Jos Stam's GDC 2003 paper</a>.
     </p>`,
-  infoItems: [
-    ['Mouse', 'push the fluid'],
-    ['&#9881; Controls', 'adjust fluid &amp; particle parameters'],
-    ['&#8595; Download', 'export a settings panel + image'],
-    ['&#11014; Share', 'copy a link with all current settings'],
-    ['▶ button', 'start auto-cycling a slider; click again to stop'],
-    ['Trail fade', 'lower = longer motion trails'],
-  ],
-
   // Default canvas interaction (native 2D mouse-push, handled in sketch.js).
   // The runtime pauses it while a slider/button is being used.
   interaction: {

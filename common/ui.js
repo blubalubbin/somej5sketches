@@ -188,22 +188,21 @@
   }
 
   function buildDOM() {
-    // HUD
+    // HUD. Each button carries data-hud-tip so a glassy tip describing its action
+    // appears on hover (desktop) or long-press (touch) — see initHudTips.
     let hud = '<a class="back" href="' + (CFG.backHref || '../') +
-      '">&#8592; <span class="hud-label">Index</span></a>';
+      '" data-hud-tip="back">&#8592; <span class="hud-label">Back</span></a>';
     const hudCfg = CFG.hud || { info: true, controls: true, download: true, share: true };
-    if (hudCfg.info)     hud += '<button id="info-btn" data-toggle-info="1">&#9432; <span class="hud-label">Info</span></button>';
-    if (hudCfg.controls) hud += '<button id="ctrl-btn" data-toggle-controls="1">&#9881; <span class="hud-label">Controls</span></button>';
-    if (hudCfg.download) hud += '<button id="shot-btn" data-export="1">&#8595; <span class="hud-label">Download</span></button>';
-    if (hudCfg.share)    hud += '<button id="share-btn" data-share="1">&#11014; <span class="hud-label">Share</span></button>';
+    if (hudCfg.info)     hud += '<button id="info-btn" data-toggle-info="1" data-hud-tip="info">&#9432; <span class="hud-label">Description</span></button>';
+    if (hudCfg.controls) hud += '<button id="ctrl-btn" data-toggle-controls="1" data-hud-tip="controls">&#9881; <span class="hud-label">Controls</span></button>';
+    if (hudCfg.download) hud += '<button id="shot-btn" data-export="1" data-hud-tip="download">&#8595; <span class="hud-label">Download</span></button>';
+    if (hudCfg.share)    hud += '<button id="share-btn" data-share="1" data-hud-tip="share">&#11014; <span class="hud-label">Share</span></button>';
 
-    // Info panel
+    // Description panel — sketch-specific info only (button actions live in the
+    // hover/long-press HUD tips, not here).
     let info = '<button id="info-close" data-close-info="1">&#10005; Minimise</button>' +
       '<strong style="color:#eee;">' + (CFG.infoTitle || CFG.title) + '</strong>';
     if (CFG.infoHtml) info += CFG.infoHtml;
-    info += '<div class="info-grid">';
-    for (const item of (CFG.infoItems || [])) info += '<div class="info-grid-item"><strong>' + item[0] + '</strong>' + item[1] + '</div>';
-    info += '</div>';
 
     // Controls panel toolbar + sections + footer
     let panel = '<div class="ctrl-row" style="margin-bottom:0.75rem;">' +
@@ -310,7 +309,43 @@
     initSliderDrag();
     initTrimDrag();
     initButtonGuard();
+    initHudTips();
     if (CFG.canvasDrag) initCanvasDrag();
+  }
+
+  // HUD button help: glassy tip on hover (pointer devices) or long-press (touch).
+  function initHudTips() {
+    const hud = document.getElementById('hud');
+    if (!hud) return;
+    const canHover = () => !window.matchMedia || window.matchMedia('(hover: hover)').matches;
+
+    hud.querySelectorAll('[data-hud-tip]').forEach(b => {
+      const tip = _hudTips[b.dataset.hudTip];
+      if (!tip) return;
+      b.addEventListener('mouseenter', () => { if (canHover()) _showTipObj(tip, true); });
+      b.addEventListener('mouseleave', () => { if (canHover()) _hideTip(); });
+    });
+
+    // Long-press on touch: hold a button to reveal its tip without firing the
+    // button's action (the trailing click is swallowed).
+    let _timer = null, _pid = null, _x = 0, _y = 0, _fired = false;
+    hud.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse') return;
+      const b = e.target.closest('[data-hud-tip]');
+      const tip = b && _hudTips[b.dataset.hudTip];
+      if (!tip) return;
+      _pid = e.pointerId; _x = e.clientX; _y = e.clientY; _fired = false;
+      clearTimeout(_timer);
+      _timer = setTimeout(() => { _fired = true; _showTipObj(tip, true); }, 450);
+    });
+    hud.addEventListener('pointermove', e => {
+      if (e.pointerId === _pid && Math.hypot(e.clientX - _x, e.clientY - _y) > 10) clearTimeout(_timer);
+    });
+    ['pointerup', 'pointercancel'].forEach(ev =>
+      hud.addEventListener(ev, e => { if (e.pointerId === _pid) { clearTimeout(_timer); _pid = null; } }));
+    hud.addEventListener('click', e => {
+      if (_fired) { e.stopImmediatePropagation(); e.preventDefault(); _fired = false; }
+    }, true);
   }
 
   function bindClick(id, fn) {
@@ -440,6 +475,32 @@
     el.style.webkitMaskImage = uri;
     el.style.maskImage = uri;
   }
+  // Generic descriptions of each HUD button's action, shown in the glassy tip
+  // overlay on hover (desktop) or long-press (touch).
+  const _hudTips = {
+    back:     { eyebrow: 'Navigate', headline: 'Back',
+      lead: 'Return to the catalogue.',
+      note: 'Leaves this sketch and goes back to the index of all sketches.' },
+    info:     { eyebrow: 'Panel', headline: 'Description',
+      lead: 'What this sketch does.',
+      note: 'Opens a panel describing the sketch and how it works.' },
+    controls: { eyebrow: 'Panel', headline: 'Controls',
+      lead: 'Tune the sketch.',
+      note: 'Opens the slider panel. Each slider has a <strong>▶</strong> to auto-cycle it and a <strong>↺</strong> to reset; <strong>Play all</strong> animates everything together.' },
+    download: { eyebrow: 'Action', headline: 'Download',
+      lead: 'Save a PNG.',
+      note: 'Exports the current canvas as an image, with a card listing every parameter value.' },
+    share:    { eyebrow: 'Action', headline: 'Share',
+      lead: 'Copy a link.',
+      note: 'Copies a URL that encodes all current settings (and any running auto-cycle speeds) so the exact configuration round-trips.' },
+  };
+
+  function _hideTip() {
+    const o = document.getElementById('tip-overlay');
+    if (o) o.classList.remove('show');
+    clearTimeout(_tipTimer);
+  }
+
   // Render a tip object into the glassy overlay. `force` bypasses the tips
   // toggle / suppression — used when the user explicitly taps the interaction note.
   function _showTipObj(info, force) {
