@@ -355,9 +355,11 @@
 
   // ── panels ───────────────────────────────────────────────────────────────--
   function toggleControls() {
-    const open = document.getElementById('controls-panel').classList.toggle('open');
+    const panel = document.getElementById('controls-panel');
+    const open = panel.classList.toggle('open');
     document.getElementById('ctrl-btn').classList.toggle('active', open);
     if (open) {
+      panel.classList.remove('idle-dim');   // reopen at full opacity
       document.getElementById('info-panel').classList.remove('open');
       document.getElementById('info-btn').classList.remove('active');
       localStorage.setItem(storageKey('info-seen'), '1');
@@ -572,6 +574,7 @@
     const anyPlaying = Object.values(_sliderSpeeds).some(s => s !== 0);
     const panel = document.getElementById('controls-panel');
     panel.classList.toggle('auto-playing', anyPlaying);
+    if (anyPlaying) panel.classList.remove('idle-dim');   // auto-play dim takes over
     if (!anyPlaying) panel.classList.remove('revealed');
     const btn = document.getElementById('pause-all-btn');
     if (btn) btn.textContent = anyPlaying ? '⏸ Pause all' : '▶ Play all';
@@ -705,7 +708,13 @@
     function endDrag() {
       if (_slider && _pointerId != null) { try { _slider.releasePointerCapture(_pointerId); } catch (_) {} }
       _slider = null; _pointerId = null; _draggingSliderId = null;
-      const p = panel(); if (p) p.classList.remove('dragging');
+      const p = panel();
+      if (p) {
+        p.classList.remove('dragging');
+        // Settle to a partial fade so the canvas result stays visible (skip while
+        // auto-cycling, which owns its own dim).
+        if (p.classList.contains('open') && !p.classList.contains('auto-playing')) p.classList.add('idle-dim');
+      }
       const hud = document.getElementById('hud'); if (hud) hud.classList.remove('dragging');
     }
     document.addEventListener('pointerdown', e => {
@@ -722,6 +731,7 @@
       _startClientX = e.clientX; _prevClientX = e.clientX;
       _draggingSliderId = slider.id;
       panel().classList.add('dragging');
+      panel().classList.remove('idle-dim');   // drag uses its own heavier fade
       const hud = document.getElementById('hud'); if (hud) hud.classList.add('dragging');
       try { slider.setPointerCapture(e.pointerId); } catch (_) {}
       e.preventDefault();
