@@ -193,7 +193,7 @@
     let hud = '<a class="back" href="' + (CFG.backHref || '../') +
       '" data-hud-tip="back">&#8592; <span class="hud-label">Back</span></a>';
     const hudCfg = CFG.hud || { info: true, controls: true, download: true, share: true };
-    if (hudCfg.info)     hud += '<button id="info-btn" data-toggle-info="1" data-hud-tip="info">&#9432; <span class="hud-label">Description</span></button>';
+    if (hudCfg.info)     hud += '<button id="info-btn" data-toggle-info="1" data-hud-tip="info" aria-label="Description">&#9432;</button>';
     if (hudCfg.controls) hud += '<button id="ctrl-btn" data-toggle-controls="1" data-hud-tip="controls">&#9881; <span class="hud-label">Controls</span></button>';
     if (hudCfg.download) hud += '<button id="shot-btn" data-export="1" data-hud-tip="download">&#8595; <span class="hud-label">Download</span></button>';
     if (hudCfg.share)    hud += '<button id="share-btn" data-share="1" data-hud-tip="share">&#11014; <span class="hud-label">Share</span></button>';
@@ -326,26 +326,14 @@
       b.addEventListener('mouseleave', () => { if (canHover()) _hideTip(); });
     });
 
-    // Long-press on touch: hold a button to reveal its tip without firing the
-    // button's action (the trailing click is swallowed).
-    let _timer = null, _pid = null, _x = 0, _y = 0, _fired = false;
+    // Touch/pen: show the tip immediately on press (no delay). The button's own
+    // action still fires on release.
     hud.addEventListener('pointerdown', e => {
       if (e.pointerType === 'mouse') return;
       const b = e.target.closest('[data-hud-tip]');
       const tip = b && _hudTips[b.dataset.hudTip];
-      if (!tip) return;
-      _pid = e.pointerId; _x = e.clientX; _y = e.clientY; _fired = false;
-      clearTimeout(_timer);
-      _timer = setTimeout(() => { _fired = true; _showTipObj(tip, true); }, 450);
+      if (tip) _showTipObj(tip, true);
     });
-    hud.addEventListener('pointermove', e => {
-      if (e.pointerId === _pid && Math.hypot(e.clientX - _x, e.clientY - _y) > 10) clearTimeout(_timer);
-    });
-    ['pointerup', 'pointercancel'].forEach(ev =>
-      hud.addEventListener(ev, e => { if (e.pointerId === _pid) { clearTimeout(_timer); _pid = null; } }));
-    hud.addEventListener('click', e => {
-      if (_fired) { e.stopImmediatePropagation(); e.preventDefault(); _fired = false; }
-    }, true);
   }
 
   function bindClick(id, fn) {
