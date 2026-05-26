@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Rotating Sphere v2</title>
+    <title>Rotating Sphere</title>
     <style>
       body { margin: 0; overflow: hidden; background: #000; }
 
@@ -391,7 +391,7 @@
 
       <div id="info-panel">
         <button id="info-close" onclick="closeInfo()">&#10005; Minimise</button>
-        <strong style="color:#eee;">Rotating Sphere v2</strong>
+        <strong style="color:#eee;">Rotating Sphere</strong>
         <div class="info-grid">
           <div class="info-grid-item"><strong>Drag canvas</strong>rotate the sphere</div>
           <div class="info-grid-item"><strong>&#9881; Controls</strong>adjust axis, warp &amp; centre parameters</div>
@@ -1463,7 +1463,7 @@
           const triggerDownload = url => {
             const a = document.createElement('a');
             a.href = url;
-            a.download = `rotating-sphere-v2-${Date.now()}.png`;
+            a.download = `rotating-sphere-${Date.now()}.png`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1506,7 +1506,7 @@
 
         ctx.font = `bold 26px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
         ctx.fillStyle = '#e6edf3';
-        ctx.fillText('Rotating Sphere v2', px, cy);
+        ctx.fillText('Rotating Sphere', px, cy);
         cy += 14;
         ctx.fillStyle = '#30363d';
         ctx.fillRect(px, cy, w - (px - x) * 2, 1);
