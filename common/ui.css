@@ -76,9 +76,38 @@ html {
   gap: 0.9rem; margin-bottom: 0.65rem;
 }
 .ctrl-label  { min-width: 110px; color: #bbb; font-size: 0.9rem; cursor: ew-resize; user-select: none; }
+/* ── Slider as a level-meter ──
+   No pill: a faint translucent-white track that fills solid white left→right to
+   the current value, with a slim bright tick as the thumb. The fill width comes
+   from a `--fill` CSS var (set by ui.js) because WebKit can't paint a
+   fill-before-thumb natively; Firefox uses ::-moz-range-progress instead. */
 input[type="range"] {
-  flex: 1; min-width: 0; accent-color: #58a6ff;
+  flex: 1; min-width: 0;
   height: 2rem; cursor: pointer;
+  -webkit-appearance: none; appearance: none;
+  background: transparent;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 0.5rem; border-radius: 3px;
+  background:
+    linear-gradient(#fff, #fff) left center / var(--fill, 0%) 100% no-repeat,
+    rgba(255,255,255,0.13);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 3px; height: 1.1rem; margin-top: -0.3rem;
+  background: #fff; border: none; border-radius: 1px;
+  box-shadow: 0 0 5px rgba(255,255,255,0.7);
+}
+input[type="range"]::-moz-range-track {
+  height: 0.5rem; border-radius: 3px; background: rgba(255,255,255,0.13);
+}
+input[type="range"]::-moz-range-progress {
+  height: 0.5rem; border-radius: 3px; background: #fff;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 3px; height: 1.1rem; border: none; border-radius: 1px;
+  background: #fff; box-shadow: 0 0 5px rgba(255,255,255,0.7);
 }
 .ctrl-value {
   min-width: 64px; text-align: right;
@@ -130,7 +159,45 @@ input[type="range"] {
   color: #888; font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
-.speed-row input[type="range"] { accent-color: #e0a050; height: 1.4rem; }
+/* Speed slider: a marching diagonal-stripe bar in amber that fills left→right to
+   the speed value — a static white bar reads as "a value", a moving striped bar
+   as "a rate". WebKit has no fill pseudo, so a full-width repeating stripe layer
+   (whose position animates to march) is clipped to the value by a `--fill`-sized
+   mask, and the faint unfilled groove lives on the input itself since the mask
+   removes the track past the fill. Firefox uses ::-moz-range-progress, which is
+   already exactly the value width. No thumb: the fill's leading edge is the
+   indicator (the value is also printed beside the bar). */
+.speed-row input[type="range"] {
+  height: 1.1rem;
+  background: linear-gradient(rgba(255,255,255,0.1) 0 0) center / 100% 0.32rem no-repeat;
+}
+.speed-row input[type="range"]::-webkit-slider-runnable-track {
+  height: 0.32rem; border-radius: 2px;
+  background: repeating-linear-gradient(-45deg, #f0b060 0 5px, #9c6020 5px 10px);
+  -webkit-mask: linear-gradient(#000 0 0) left center / var(--fill, 0%) 100% no-repeat;
+          mask: linear-gradient(#000 0 0) left center / var(--fill, 0%) 100% no-repeat;
+  animation: _speed-march 0.6s linear infinite;
+}
+.speed-row input[type="range"]::-webkit-slider-thumb {
+  width: 0; height: 0.32rem; margin-top: 0; box-shadow: none;
+}
+.speed-row input[type="range"]::-moz-range-track {
+  height: 0.32rem; border-radius: 2px; background: rgba(255,255,255,0.1);
+}
+.speed-row input[type="range"]::-moz-range-progress {
+  height: 0.32rem; border-radius: 2px;
+  background: repeating-linear-gradient(-45deg, #f0b060 0 5px, #9c6020 5px 10px);
+  animation: _speed-march 0.6s linear infinite;
+}
+.speed-row input[type="range"]::-moz-range-thumb {
+  width: 0; height: 0.32rem; border: none; background: transparent; box-shadow: none;
+}
+/* Stripe period is 10px along the -45° axis → 10·√2 ≈ 14.14px horizontal, so a
+   shift of that distance loops seamlessly. */
+@keyframes _speed-march {
+  from { background-position: 0 0; }
+  to   { background-position: -14.14px 0; }
+}
 .slider-group.has-speed .speed-value { color: #e0a050; }
 .speed-play-btn {
   background: none; border: 1px solid #444; border-radius: 3px;
