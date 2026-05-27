@@ -66,6 +66,20 @@
   };
   const _snap = (v, min, step) => (step > 0 ? min + Math.round((v - min) / step) * step : v);
 
+  // Sliders render as a level-meter: a translucent track filled left→right. The
+  // fill width is driven by a `--fill` CSS var because WebKit can't fill before
+  // the thumb natively (Firefox uses ::-moz-range-progress and ignores the var).
+  function _updateFill(slider) {
+    const min = parseFloat(slider.min), max = parseFloat(slider.max);
+    const span = max - min;
+    const pct = span > 0 ? ((parseFloat(slider.value) - min) / span) * 100 : 0;
+    slider.style.setProperty('--fill', Math.max(0, Math.min(100, pct)) + '%');
+  }
+  function _updateAllFills() {
+    const panel = document.getElementById('controls-panel');
+    if (panel) panel.querySelectorAll('input[type="range"]').forEach(_updateFill);
+  }
+
   function storageKey(suffix) { return CFG.storagePrefix + '-' + suffix; }
   function modeToggle() {
     for (const sec of CFG.sections) if (sec.modeToggle) return sec.modeToggle;
@@ -94,6 +108,7 @@
     tipsEnabled = localStorage.getItem(storageKey('tips')) !== '0';
     buildDOM();
     wireEvents();
+    _updateAllFills();
     _syncTipsBtn();
     if (!localStorage.getItem(storageKey('info-seen'))) {
       document.getElementById('info-panel').classList.add('open');
@@ -111,11 +126,12 @@
     const pos = s.default;
     const labelStyle = s.labelColor ? ' style="color:' + s.labelColor + ';"' : '';
     const valText = s.format ? s.format(pos) : fmtDefault(pos, s.step);
+    const fillPct = (s.max - s.min) > 0 ? ((pos - s.min) / (s.max - s.min)) * 100 : 0;
     let h = '<div class="slider-group"><div class="ctrl-row">' +
       '<button class="reset-btn" data-reset="' + s.id + '">&#8634;</button>' +
       '<span class="ctrl-label"' + labelStyle + '>' + s.label + '</span>' +
       '<input id="' + s.id + '" type="range" min="' + s.min + '" max="' + s.max +
-        '" step="' + s.step + '" value="' + pos + '">' +
+        '" step="' + s.step + '" value="' + pos + '" style="--fill:' + fillPct + '%">' +
       '<span class="ctrl-value" id="' + valId(s.id) + '">' + valText + '</span>';
     if (s.speed) {
       h += '<button class="speed-play-btn" id="' + playId(s.id) + '" data-play="' + s.id + '">▶</button>';
@@ -280,6 +296,7 @@
     panel.addEventListener('input', e => {
       const el = e.target;
       if (!(el instanceof HTMLInputElement) || el.type !== 'range') return;
+      _updateFill(el);
       if (el.dataset.speedFor) { setSliderSpeed(el.dataset.speedFor, el.value); return; }
       const cfg = byId[el.id];
       if (!cfg) return;
@@ -664,6 +681,7 @@
     if (speed !== 0) _sliderLastSpeeds[id] = speed;
     const sp  = document.getElementById(speedId(id));
     const vel = document.getElementById(speedValId(id));
+    if (sp) _updateFill(sp);
     if (vel && sp) {
       const dec = decimalsFromStep(sp.step);
       vel.textContent = speed.toFixed(dec);
@@ -908,7 +926,7 @@
       try { pos = s.get(); } catch (_) { continue; }
       if (pos === undefined || pos === null || (typeof pos === 'number' && Number.isNaN(pos))) continue;
       const el = document.getElementById(s.id);
-      if (el) el.value = pos;
+      if (el) { el.value = pos; _updateFill(el); }
       const lbl = document.getElementById(valId(s.id));
       if (lbl) lbl.textContent = s.format ? s.format(parseFloat(pos)) : fmtDefault(parseFloat(pos), s.step);
     }
