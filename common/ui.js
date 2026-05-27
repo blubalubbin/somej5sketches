@@ -124,15 +124,20 @@
   // ── DOM construction ─────────────────────────────────────────────────────--
   function sliderGroupHTML(s) {
     const pos = s.default;
-    const labelStyle = s.labelColor ? ' style="color:' + s.labelColor + ';"' : '';
     const valText = s.format ? s.format(pos) : fmtDefault(pos, s.step);
     const fillPct = (s.max - s.min) > 0 ? ((pos - s.min) / (s.max - s.min)) * 100 : 0;
+    // The label/value sit inside the bar and invert against the white fill, so
+    // they stay monochrome — the per-slider labelColor accent is dropped here.
     let h = '<div class="slider-group"><div class="ctrl-row">' +
       '<button class="reset-btn" data-reset="' + s.id + '">&#8634;</button>' +
-      '<span class="ctrl-label"' + labelStyle + '>' + s.label + '</span>' +
-      '<input id="' + s.id + '" type="range" min="' + s.min + '" max="' + s.max +
-        '" step="' + s.step + '" value="' + pos + '" style="--fill:' + fillPct + '%">' +
-      '<span class="ctrl-value" id="' + valId(s.id) + '">' + valText + '</span>';
+      '<div class="slider-bar">' +
+        '<input id="' + s.id + '" type="range" min="' + s.min + '" max="' + s.max +
+          '" step="' + s.step + '" value="' + pos + '" style="--fill:' + fillPct + '%">' +
+        '<div class="bar-text">' +
+          '<span class="ctrl-label">' + s.label + '</span>' +
+          '<span class="ctrl-value" id="' + valId(s.id) + '">' + valText + '</span>' +
+        '</div>' +
+      '</div>';
     if (s.speed) {
       h += '<button class="speed-play-btn" id="' + playId(s.id) + '" data-play="' + s.id + '">▶</button>';
     }
@@ -220,7 +225,7 @@
     let hud = '<a class="back" href="' + (CFG.backHref || '../') +
       '" data-hud-tip="back">&#8592; <span class="hud-label">Back</span></a>';
     const hudCfg = CFG.hud || { info: true, controls: true, download: true, share: true };
-    if (hudCfg.info)     hud += '<button id="info-btn" data-toggle-info="1" data-hud-tip="info" aria-label="Description">&#9432; <span class="hud-label">Info</span></button>';
+    if (hudCfg.info)     hud += '<button id="info-btn" data-toggle-info="1" aria-label="Description">&#9432; <span class="hud-label">Info</span></button>';
     if (hudCfg.controls) hud += '<button id="ctrl-btn" data-toggle-controls="1" data-hud-tip="controls">&#9881; <span class="hud-label">Controls</span></button>';
     if (hudCfg.download) hud += '<button id="shot-btn" data-export="1" data-hud-tip="download">&#8595; <span class="hud-label">Download</span></button>';
     if (hudCfg.share)    hud += '<button id="share-btn" data-share="1" data-hud-tip="share">&#8593; <span class="hud-label">Share</span></button>';
@@ -264,10 +269,12 @@
     const panel = document.getElementById('controls-panel');
 
     // HUD + info-close (outside the panel — not subject to the drag guard).
+    // Share + download don't fire on the first press: it arms the button and
+    // prompts, and a second press within the window actually runs the action.
     bindClick('info-btn',   toggleInfo);
     bindClick('ctrl-btn',   toggleControls);
-    bindClick('shot-btn',   exportScreenshot);
-    bindClick('share-btn',  copyShareLink);
+    bindClick('shot-btn',   () => confirmThen('shot-btn',  'Press again to download PNG', exportScreenshot));
+    bindClick('share-btn',  () => confirmThen('share-btn', 'Press again to copy link',    copyShareLink));
     bindClick('info-close', closeInfo);
 
     // Per-button onClick map for config-supplied panel buttons.
@@ -541,16 +548,17 @@
     if (_sliderSpeeds[id]) return;   // manual only: skip while auto-cycling
     _showTipObj(cfg.tip, false);
   }
-  // The tip for the default canvas interaction. When the drag drives a single
-  // slider, reuse that slider's own tip so the interaction and its control read
-  // identically; a 2D drag (two sliders) or a bespoke 2D push (no canvasDrag)
-  // has no single corresponding control, so it keeps the interaction's own tip.
-  function _interactionTip() {
+  // The tip for the default canvas interaction. The drag maps each pointer axis
+  // onto a slider, so we mirror that slider's own tip instead of a separate
+  // hand-written one. `axis` picks which mapped slider to show ('x'/'y'); with no
+  // axis we use whichever single axis exists, else x. A bespoke 2D push (no
+  // canvasDrag, e.g. fluid) has no mapped slider, so it keeps its own tip.
+  function _interactionTip(axis) {
     const cd = CFG.canvasDrag;
     if (cd) {
-      const axes = [cd.x, cd.y].filter(Boolean);
-      if (axes.length === 1) {
-        const scfg = byId[axes[0].target()];
+      const ax = (axis && cd[axis]) || cd.x || cd.y;
+      if (ax) {
+        const scfg = byId[ax.target()];
         if (scfg && scfg.tip) return scfg.tip;
       }
     }
@@ -880,9 +888,17 @@
     if (cd.x) specs.push({ screen: 'x', target: cd.x.target, span: cd.x.perWidth,  mode: cd.x.mode || 'clamp' });
     if (cd.y) specs.push({ screen: 'y', target: cd.y.target, span: cd.y.perHeight, mode: cd.y.mode || 'clamp' });
 
-    let _active = false, _startX = 0, _startY = 0, _pid = null;
+    let _active = false, _startX = 0, _startY = 0, _pid = null, _tipAxis = null;
     const _starts = [];   // start value of each spec's target slider
     const isInOverlay = el => el && el.closest && el.closest('#overlay');
+
+    // Show the tip of the slider the drag is currently driving most — a two-axis
+    // drag flips between its x and y sliders as the dominant direction changes.
+    function _showAxisTip(axis) {
+      if (axis === _tipAxis) return;
+      _tipAxis = axis;
+      _showTipObj(_interactionTip(axis), false);
+    }
 
     document.addEventListener('pointerdown', e => {
       if (isInOverlay(e.target)) return;
@@ -894,11 +910,16 @@
         _starts.push(sl ? (parseFloat(sl.value) || 0) : 0);
       }
       _canvasDragActive = true;
-      _showTipObj(_interactionTip(), false);
+      _tipAxis = null;
+      _showAxisTip(specs.length === 1 ? specs[0].screen : 'x');
       document.getElementById('overlay').classList.add('canvas-dragging');
     });
     document.addEventListener('pointermove', e => {
       if (!_active || e.pointerId !== _pid) return;
+      if (specs.length > 1) {
+        const adx = Math.abs(e.clientX - _startX), ady = Math.abs(e.clientY - _startY);
+        if (adx > 8 || ady > 8) _showAxisTip(adx >= ady ? 'x' : 'y');
+      }
       const w = window.innerWidth || 1, h = window.innerHeight || 1;
       specs.forEach((sp, i) => {
         const slider = document.getElementById(sp.target());
@@ -1106,6 +1127,28 @@
     el.textContent = msg; el.classList.add('show');
     clearTimeout(_toastTimer);
     _toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+  }
+
+  // Two-press guard for the share + download buttons: the first press arms the
+  // button (highlight + toast prompt) and a second press within the window runs
+  // `fn`. Pressing a different guarded button — or the timeout — disarms.
+  const _confirm = { id: null, timer: null };
+  function _disarmConfirm() {
+    if (_confirm.id) {
+      const b = document.getElementById(_confirm.id);
+      if (b) b.classList.remove('armed');
+    }
+    clearTimeout(_confirm.timer);
+    _confirm.id = null;
+  }
+  function confirmThen(btnId, prompt, fn) {
+    if (_confirm.id === btnId) { _disarmConfirm(); fn(); return; }
+    _disarmConfirm();
+    _confirm.id = btnId;
+    const b = document.getElementById(btnId);
+    if (b) b.classList.add('armed');
+    showToast(prompt);
+    _confirm.timer = setTimeout(_disarmConfirm, 3000);
   }
 
   // True while the user is touching the HUD/controls (slider, button, trim).
