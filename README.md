@@ -163,30 +163,35 @@ one you know them all.
 - **HUD bar** (pinned to the bottom of the screen). Hover any button (or press
   it on touch) to immediately show a glassy tip describing what it does:
   - **← Back** — back to the catalogue.
-  - **ⓘ** (icon only) — a panel describing what the sketch does (sketch-specific
-    only; the button actions are explained by their hover/press tips).
+  - **ⓘ Info** — a panel describing what the sketch does (sketch-specific only;
+    the button actions are explained by their hover/press tips).
   - **⚙ Controls** — opens the slider panel.
-  - **⬇ Download** — exports a PNG of the canvas with a settings card listing
+  - **↓ Download** — exports a PNG of the canvas with a settings card listing
     every current parameter.
-  - **⬆ Share** — copies a link that encodes all current settings (and any
+  - **↑ Share** — copies a link that encodes all current settings (and any
     running auto-cycle speeds) so a configuration round-trips exactly.
 - **Controls panel** — sliders grouped into sections. Each section and each
   individual slider has a `↺` reset button, plus a global **Reset all**.
 - **Auto-cycle** — every slider has a ▶ play button that animates it on its own
-  (values wrap or oscillate) at an adjustable speed; **Play all** toggles them
-  together. Cycle speeds are part of the share link.
+  (values wrap or oscillate) at an adjustable speed. Each section has a ▶ play
+  button that toggles just its own sliders, and **Play all** toggles every
+  slider together. Cycle speeds are part of the share link.
 - **Glassy tips** — while you drag a control by hand, a large translucent
   caption fades in over the canvas naming the parameter and explaining what it
   does. Tips can be toggled off in the controls panel and never appear during
   auto-cycling.
 - **Canvas interaction** — every sketch has a default pointer interaction on the
   canvas (drag to rotate, shape, warp, stir, or push). It is named in a tappable
-  note at the top of the controls panel — tap it to show its glassy tip. Where
-  the interaction maps onto sliders (the shader sketches), a 2D drag drives two
-  parameters at once (left/right and up/down); fluid's native mouse-push pauses
-  automatically while you work a slider so you never disturb the flow.
-- **Touch friendly** — the UI dims while you drag the canvas or a slider, and
-  the controls panel scrolls when it gets tall, so everything works on a phone.
+  note at the top of the controls panel — tap it to show its glassy tip. When the
+  drag maps onto a single slider its tip matches that control's tip; where it
+  drives two sliders at once (the shader sketches' 2D drag — left/right and
+  up/down) or is a bespoke 2D push (fluid), it keeps its own tip. Fluid's native
+  mouse-push pauses automatically while you work a slider so you never disturb
+  the flow.
+- **Touch friendly** — the UI dims while you drag the canvas or a slider, the
+  controls panel scrolls when it gets tall, and nothing is text-selectable so a
+  long press triggers a button rather than highlighting its label — everything
+  works on a phone.
 
 ---
 

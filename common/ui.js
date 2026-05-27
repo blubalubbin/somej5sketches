@@ -71,6 +71,12 @@
     for (const sec of CFG.sections) if (sec.modeToggle) return sec.modeToggle;
     return null;
   }
+  const sectionPlayId  = id => id + '-section-play';
+  // A section gets its own play button only if it owns at least one auto-cycleable
+  // slider (one with a `speed` row).
+  function sectionHasSpeed(sectionId) {
+    return CFG.sliders.some(s => s.section === sectionId && s.speed);
+  }
 
   // ── public entry ───────────────────────────────────────────────────────────
   function init(config) {
@@ -155,14 +161,19 @@
     const resetTitle = sec.resetTitle || ('Reset ' + sec.heading.toLowerCase());
     let h = '<div class="ctrl-heading section-heading"' + marginTop + '>' +
       '<button class="reset-btn" data-reset-section="' + sec.id + '" title="' + resetTitle + '">&#8634;</button>' +
-      '<span>' + sec.heading + subnote + '</span>';
+      '<span>' + sec.heading + subnote + '</span>' +
+      '<div style="flex:1"></div>';
     if (sec.modeToggle) {
       const mt = sec.modeToggle;
       const cur = mt.getMode();
       const idx = Math.max(0, mt.modes.findIndex(m => m.key === cur));
       const next = mt.modes[(idx + 1) % mt.modes.length];
-      h += '<div style="flex:1"></div><button class="speed-play-btn" id="' + mt.buttonId +
+      h += '<button class="speed-play-btn" id="' + mt.buttonId +
         '" data-mode-toggle="1">' + next.name + '</button>';
+    }
+    if (sectionHasSpeed(sec.id)) {
+      h += '<button class="speed-play-btn section-play-btn" id="' + sectionPlayId(sec.id) +
+        '" data-play-section="' + sec.id + '" title="Play ' + sec.heading.toLowerCase() + '">&#9654;</button>';
     }
     h += '</div>';
     if (sec.modeToggle) {
@@ -193,10 +204,10 @@
     let hud = '<a class="back" href="' + (CFG.backHref || '../') +
       '" data-hud-tip="back">&#8592; <span class="hud-label">Back</span></a>';
     const hudCfg = CFG.hud || { info: true, controls: true, download: true, share: true };
-    if (hudCfg.info)     hud += '<button id="info-btn" data-toggle-info="1" data-hud-tip="info" aria-label="Description">&#9432;</button>';
+    if (hudCfg.info)     hud += '<button id="info-btn" data-toggle-info="1" data-hud-tip="info" aria-label="Description">&#9432; <span class="hud-label">Info</span></button>';
     if (hudCfg.controls) hud += '<button id="ctrl-btn" data-toggle-controls="1" data-hud-tip="controls">&#9881; <span class="hud-label">Controls</span></button>';
     if (hudCfg.download) hud += '<button id="shot-btn" data-export="1" data-hud-tip="download">&#8595; <span class="hud-label">Download</span></button>';
-    if (hudCfg.share)    hud += '<button id="share-btn" data-share="1" data-hud-tip="share">&#11014; <span class="hud-label">Share</span></button>';
+    if (hudCfg.share)    hud += '<button id="share-btn" data-share="1" data-hud-tip="share">&#8593; <span class="hud-label">Share</span></button>';
 
     // Description panel — sketch-specific info only (button actions live in the
     // hover/long-press HUD tips, not here).
@@ -252,10 +263,11 @@
     panel.addEventListener('click', e => {
       const t = e.target;
       let el;
-      if (t.closest('[data-interaction-tip]'))       { _showTipObj(CFG.interaction && CFG.interaction.tip, true); return; }
+      if (t.closest('[data-interaction-tip]'))       { _showTipObj(_interactionTip(), true); return; }
       if ((el = t.closest('[data-reset]')))          { resetSlider(el.dataset.reset); return; }
       if ((el = t.closest('[data-reset-section]')))  { resetSection(el.dataset.resetSection); return; }
       if ((el = t.closest('[data-play]')))           { toggleSliderSpeed(el.dataset.play); return; }
+      if ((el = t.closest('[data-play-section]')))   { toggleSectionPlay(el.dataset.playSection); return; }
       if (t.closest('[data-reset-all]'))             { resetAll(); return; }
       if (t.closest('[data-toggle-tips]'))           { toggleTips(); return; }
       if (t.closest('[data-toggle-play]'))           { toggleAllPlay(); return; }
@@ -512,6 +524,21 @@
     if (_sliderSpeeds[id]) return;   // manual only: skip while auto-cycling
     _showTipObj(cfg.tip, false);
   }
+  // The tip for the default canvas interaction. When the drag drives a single
+  // slider, reuse that slider's own tip so the interaction and its control read
+  // identically; a 2D drag (two sliders) or a bespoke 2D push (no canvasDrag)
+  // has no single corresponding control, so it keeps the interaction's own tip.
+  function _interactionTip() {
+    const cd = CFG.canvasDrag;
+    if (cd) {
+      const axes = [cd.x, cd.y].filter(Boolean);
+      if (axes.length === 1) {
+        const scfg = byId[axes[0].target()];
+        if (scfg && scfg.tip) return scfg.tip;
+      }
+    }
+    return CFG.interaction && CFG.interaction.tip;
+  }
   function _syncTipsBtn() {
     const b = document.getElementById('tips-btn');
     if (b) b.classList.toggle('toggled-on', tipsEnabled);
@@ -566,6 +593,35 @@
     if (!anyPlaying) panel.classList.remove('revealed');
     const btn = document.getElementById('pause-all-btn');
     if (btn) btn.textContent = anyPlaying ? '⏸ Pause all' : '▶ Play all';
+    _syncSectionPlayButtons();
+  }
+  // Reflect each section's play button: ⏸ (highlighted) while any of its sliders
+  // are auto-cycling, ▶ otherwise.
+  function _syncSectionPlayButtons() {
+    for (const sec of CFG.sections) {
+      const btn = document.getElementById(sectionPlayId(sec.id));
+      if (!btn) continue;
+      const playing = CFG.sliders.some(s => s.section === sec.id && _sliderSpeeds[s.id]);
+      btn.textContent = playing ? '⏸' : '▶';
+      btn.classList.toggle('toggled-on', playing);
+    }
+  }
+  // Play/pause every auto-cycleable slider in one section (skipping any hidden by
+  // a mode toggle); mirrors toggleAllPlay but scoped to the section.
+  function toggleSectionPlay(sectionId) {
+    const hidden = hiddenGroupIds();
+    const sliders = CFG.sliders.filter(s =>
+      s.section === sectionId && s.speed && !hidden.has(s.id) && document.getElementById(s.id));
+    const anyPlaying = sliders.some(s => _sliderSpeeds[s.id]);
+    for (const s of sliders) {
+      const speed = anyPlaying ? 0
+        : ((_sliderLastSpeeds[s.id] !== undefined && _sliderLastSpeeds[s.id] !== null)
+            ? _sliderLastSpeeds[s.id] : s.speed.default);
+      const sp = document.getElementById(speedId(s.id));
+      if (sp) sp.value = speed;
+      setSliderSpeed(s.id, speed);
+    }
+    _syncPlayingState();
   }
   function pauseAll() {
     for (const id of Object.keys(_sliderSpeeds)) {
@@ -820,7 +876,7 @@
         _starts.push(sl ? (parseFloat(sl.value) || 0) : 0);
       }
       _canvasDragActive = true;
-      if (CFG.interaction && CFG.interaction.tip) _showTipObj(CFG.interaction.tip, false);
+      _showTipObj(_interactionTip(), false);
       document.getElementById('overlay').classList.add('canvas-dragging');
     });
     document.addEventListener('pointermove', e => {

@@ -4,6 +4,15 @@
    glassy tips) is generated at runtime, so class names here must stay in sync
    with the markup ui.js emits. */
 
+/* Disable text selection / long-press highlight everywhere — a long press on a
+   HUD/control button should trigger its action, never select its label. */
+html {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
 #overlay {
   position: fixed;
   bottom: 0; left: 0; right: 0;
