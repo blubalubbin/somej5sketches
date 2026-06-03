@@ -77,7 +77,9 @@ sphere; each vertex is tinted with the exact pixel colour it produces, so the
 cloud literally sits in RGB space. Fixed R/G/B axes, faint unit-sphere great
 circles (the natural colour bound), a bounding box and the rotation axis are all
 drawn, with overshoot past unit length highlighted. A button toggles between a
-filled **surface** mesh and individual **dots**.
+filled **surface** mesh and individual **dots**. The polar **θ** and azimuth
+**φ** helper arcs only appear in axis+angle mode, where those angles define the
+axis; they are hidden in RGB-axes mode.
 
 ---
 

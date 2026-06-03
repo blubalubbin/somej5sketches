@@ -554,7 +554,8 @@ function drawRGBViz() {
   textSize(12);
 
   // Polar θ — arc from the +Z (blue/up) axis to the rotation axis: the tilt.
-  if (indAlpha.theta > 0.02) {
+  // Only meaningful in axis+angle mode; hidden in RGB-axes mode.
+  if (indAlpha.theta > 0.02 && rotMode === 'axis') {
     const ta = A * indAlpha.theta;
     const ang = Math.acos(Math.max(-1, Math.min(1, av.z)));
     const Rarc = 0.5 * fitR;
@@ -578,7 +579,8 @@ function drawRGBViz() {
 
   // Azimuth φ — arc in the XY (equator) plane from +X, with a drop line from
   // the axis tip: the compass heading the axis is swung around to.
-  if (indAlpha.phi > 0.02) {
+  // Only meaningful in axis+angle mode; hidden in RGB-axes mode.
+  if (indAlpha.phi > 0.02 && rotMode === 'axis') {
     const pa = A * indAlpha.phi;
     const Rarc = 0.5 * fitR, phi = axisPhi;
     const segs = Math.max(8, Math.round(Math.abs(phi) / (Math.PI / 24)));

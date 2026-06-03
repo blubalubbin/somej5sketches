@@ -57,15 +57,6 @@
         note: 'A horizontal drag turns the active rotation — <strong>Rotation</strong> in axis mode, <strong>Rotate B</strong> in RGB mode.' },
     },
 
-    panelFooter: '<div class="axis-readout">axis: (<span id="axis-display">0.577, 0.577, 0.577</span>)</div>',
-    onHydrate: () => {
-      const el = document.getElementById('axis-display');
-      if (el && typeof rotationVector !== 'undefined' && rotationVector) {
-        const v = rotationVector;
-        el.textContent = v.x.toFixed(3) + ', ' + v.y.toFixed(3) + ', ' + v.z.toFixed(3);
-      }
-    },
-
     share: {
       speedParams: {
         'theta-slider': 'sp_t', 'phi-slider': 'sp_p', 'rot-offset-slider': 'sp_r',
