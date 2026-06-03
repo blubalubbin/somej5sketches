@@ -91,7 +91,10 @@ axis; they are hidden in RGB-axes mode.
 An interactive Navier-Stokes fluid solver based on
 [Jos Stam's GDC 2003 paper](http://www.dgp.toronto.edu/people/stam/reality/Research/pdf/GDC03.pdf).
 A coarse velocity/density grid advects ~32 k particle tracers; move the mouse to
-push the fluid and watch the tracers stream through the flow.
+push the fluid and watch the tracers stream through the flow. The square canvas
+fits the viewport — its internal resolution is capped on large screens (then
+CSS-scaled up to fill) so the cost stays bounded, and shrinks 1:1 to fit small
+ones.
 
 #### Controls
 
