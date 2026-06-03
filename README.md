@@ -77,7 +77,9 @@ sphere; each vertex is tinted with the exact pixel colour it produces, so the
 cloud literally sits in RGB space. Fixed R/G/B axes, faint unit-sphere great
 circles (the natural colour bound), a bounding box and the rotation axis are all
 drawn, with overshoot past unit length highlighted. A button toggles between a
-filled **surface** mesh and individual **dots**.
+filled **surface** mesh and individual **dots**. The polar **θ** and azimuth
+**φ** helper arcs only appear in axis+angle mode, where those angles define the
+axis; they are hidden in RGB-axes mode.
 
 ---
 
@@ -89,7 +91,10 @@ filled **surface** mesh and individual **dots**.
 An interactive Navier-Stokes fluid solver based on
 [Jos Stam's GDC 2003 paper](http://www.dgp.toronto.edu/people/stam/reality/Research/pdf/GDC03.pdf).
 A coarse velocity/density grid advects ~32 k particle tracers; move the mouse to
-push the fluid and watch the tracers stream through the flow.
+push the fluid and watch the tracers stream through the flow. The square canvas
+fits the viewport — its internal resolution is capped on large screens (then
+CSS-scaled up to fill) so the cost stays bounded, and shrinks 1:1 to fit small
+ones.
 
 #### Controls
 

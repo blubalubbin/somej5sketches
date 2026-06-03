@@ -244,23 +244,65 @@ NavierStokesFluidSolver.GRID_SIZE = 16; // 16×16 fluid grid (+ 2-cell boundary)
 // ── p5.js sketch ─────────────────────────────────────────────────────────────
 const NUM_PARTICLES = 1 << 15; // 32 768 particle tracers
 
+// Internal render/sim resolution is a square capped at this size. The solver,
+// particle buffer and pixel loop all run at width×height, so their cost is
+// bounded no matter how big the screen is. On larger screens the canvas is then
+// CSS-scaled up to fill the viewport; on smaller screens it shrinks to fit,
+// staying a crisp 1:1.
+const MAX_RENDER_SIZE = 1024;
+
 let fluidSolver;
 let particles;
 let _prevMouseX = 1, _prevMouseY = 1;
 let _particleVelocityScale;
+let _cnv; // p5 canvas handle, kept so we can restyle it on resize
+
+// Largest square that fits the viewport, clamped to MAX_RENDER_SIZE for perf.
+function _renderSize() {
+  return Math.min(Math.min(windowWidth, windowHeight), MAX_RENDER_SIZE);
+}
+
+// Centre the canvas and stretch its *displayed* size to the largest square that
+// fits the viewport. The internal pixel buffer stays at width×height, so the
+// simulation cost is unchanged while the visuals fill the screen. p5 maps mouse
+// coordinates back through this CSS scale, so interaction still lines up.
+function _fitCanvasToScreen() {
+  const fit = Math.min(windowWidth, windowHeight);
+  const s = _cnv.elt.style;
+  s.width  = fit + 'px';
+  s.height = fit + 'px';
+  s.position  = 'absolute';
+  s.left = '50%';
+  s.top  = '50%';
+  s.transform = 'translate(-50%, -50%)';
+}
 
 function setup() {
-  createCanvas(768, 768);
+  _cnv = createCanvas(_renderSize(), _renderSize());
   pixelDensity(1); // Keep 1:1 logical/physical pixels for the pixel-array loop
+  _fitCanvasToScreen();
   background(0);
 
   fluidSolver = new NavierStokesFluidSolver();
   particles   = Array.from({ length: NUM_PARTICLES }, () => ({
-    x: Math.random() * 768,
-    y: Math.random() * 768,
+    x: Math.random() * width,
+    y: Math.random() * height,
   }));
   _computeParticleColor(); // Derive RGB from the default particleHue
   applySettingsFromHash(); // Load any hash-encoded settings from the URL
+}
+
+// Keep the canvas filling the viewport. When the capped internal resolution
+// actually changes, rescale particle positions so the flow isn't disturbed.
+function windowResized() {
+  const next = _renderSize();
+  if (next !== width) {
+    const scale = next / width;
+    for (const p of particles) { p.x *= scale; p.y *= scale; }
+    resizeCanvas(next, next);
+    background(0);
+  }
+  _fitCanvasToScreen();
 }
 
 function draw() {
